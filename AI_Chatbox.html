@@ -1,0 +1,2374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APU Library AI Chatbot — Frame Knowledge Base</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ==========================================================================
+           1. CSS VARIABLES & THEME SETUP
+           ========================================================================== */
+        :root {
+            --bg-body: #070d18;
+            --bg-card: #0f1c32;
+            --bg-surface: #142440;
+            --bg-surface-hover: #1c335a;
+            --border-subtle: rgba(56, 189, 248, 0.15);
+            --border-highlight: rgba(56, 189, 248, 0.4);
+            
+            --primary: #38bdf8;
+            --primary-dark: #0284c7;
+            --primary-glow: rgba(56, 189, 248, 0.25);
+            --accent: #2dd4bf;
+            --accent-glow: rgba(45, 212, 191, 0.25);
+            --indigo: #818cf8;
+            
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow-card: 0 16px 40px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border-subtle);
+        }
+
+        /* --- Reset & Global --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-body);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 35%),
+                radial-gradient(circle at 90% 80%, rgba(45, 212, 191, 0.07) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(129, 140, 248, 0.05) 0%, transparent 60%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        /* ==========================================================================
+           2. MAIN CONTAINER & GLASSMORPHISM
+           ========================================================================== */
+        .app-wrapper {
+            width: 100%;
+            max-width: 860px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: rgba(15, 28, 50, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* --- Collapsible Backend Banner --- */
+        #config-bar {
+            background: #0b1526;
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 0.65rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        #config-bar.collapsed {
+            display: none;
+        }
+
+        #config-bar input {
+            flex: 1;
+            background: rgba(2, 6, 23, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            outline: none;
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-family: monospace;
+            padding: 0.4rem 0.75rem;
+            transition: border-color 0.2s;
+        }
+
+        #config-bar input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .btn-sm {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #070d18;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 0.35rem 0.75rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, opacity 0.15s;
+        }
+
+        .btn-sm:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+        }
+
+        .btn-subtle {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-subtle:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-main);
+        }
+
+        /* --- Header --- */
+        .chat-header {
+            padding: 1rem 1.4rem;
+            background: linear-gradient(180deg, #132442 0%, #0f1c32 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #0284c7, #2dd4bf);
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .header-text h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge-verified {
+            font-size: 0.65rem;
+            font-weight: 600;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border: 1px solid var(--border-highlight);
+            border-radius: 999px;
+            padding: 0.15rem 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .header-text p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 2px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mode-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .mode-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-main);
+        }
+
+        /* ==========================================================================
+           3. MESSAGES SCROLL AREA
+           ========================================================================== */
+        #messages {
+            height: 520px;
+            overflow-y: auto;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        #messages::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        #messages::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.2);
+            border-radius: 4px;
+        }
+
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.4);
+        }
+
+        /* --- Rows & Bubbles --- */
+        .row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .row.user {
+            flex-direction: row-reverse;
+        }
+
+        .row-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .row-avatar.ai {
+            background: linear-gradient(135deg, #0284c7, #2dd4bf);
+            color: #070d18;
+        }
+
+        .row-avatar.user {
+            background: linear-gradient(135deg, #6366f1, #38bdf8);
+            color: #ffffff;
+        }
+
+        .bubble-wrap {
+            max-width: 82%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .bubble {
+            padding: 0.85rem 1.15rem;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .bubble.ai {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-top-left-radius: 4px;
+            color: #e2eaf4;
+        }
+
+        .bubble.user {
+            background: linear-gradient(135deg, #1e3a8a, #1e40af);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-top-right-radius: 4px;
+            color: #ffffff;
+        }
+
+        .meta-timestamp {
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            padding: 0 0.3rem;
+        }
+
+        .row.user .meta-timestamp {
+            text-align: right;
+        }
+
+        /* --- Rich UI Components in Chat --- */
+        .book-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.6rem;
+            width: 100%;
+        }
+
+        .book-card {
+            background: rgba(10, 19, 36, 0.75);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            transition: all 0.2s;
+        }
+
+        .book-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        }
+
+        .book-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .book-id-badge {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.72rem;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-highlight);
+        }
+
+        .book-copies-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+        }
+
+        .copies-avail {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .copies-none {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .book-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #ffffff;
+            line-height: 1.3;
+        }
+
+        .book-author {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .book-location-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.74rem;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            color: #cbd5e1;
+            margin-top: 0.2rem;
+        }
+
+        .book-actions {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.3rem;
+        }
+
+        .card-action-btn {
+            flex: 1;
+            background: rgba(56, 189, 248, 0.12);
+            color: var(--primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .card-action-btn:hover {
+            background: var(--primary);
+            color: #070d18;
+        }
+
+        /* --- Receipt / Confirmation Card --- */
+        .receipt-card {
+            background: rgba(8, 18, 38, 0.9);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            margin-top: 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .receipt-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid rgba(45, 212, 191, 0.2);
+            padding-bottom: 0.4rem;
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .receipt-table td {
+            padding: 0.3rem 0;
+        }
+
+        .receipt-table td:first-child {
+            color: var(--text-dim);
+            width: 40%;
+        }
+
+        .receipt-table td:last-child {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .receipt-note {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            font-style: italic;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-top: 0.4rem;
+        }
+
+        /* --- Quick Category Chips List --- */
+        .category-chip-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+        }
+
+        .cat-chip {
+            background: var(--bg-surface-hover);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 0.35rem 0.8rem;
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .cat-chip:hover {
+            background: var(--primary);
+            color: #070d18;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        /* --- History Table --- */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            margin-top: 0.5rem;
+            background: rgba(2, 6, 23, 0.4);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .history-table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            text-align: left;
+            padding: 0.5rem 0.6rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .history-table td {
+            padding: 0.45rem 0.6rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .status-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-borrowed {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .status-returned {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+
+        .status-overdue {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        /* --- Room Cards & Badges --- */
+        .room-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.6rem;
+            width: 100%;
+        }
+
+        .room-card {
+            background: rgba(10, 20, 40, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            transition: all 0.2s;
+        }
+
+        .room-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+        }
+
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .room-id-badge {
+            font-family: monospace;
+            font-weight: 700;
+            font-size: 0.75rem;
+            background: rgba(45, 212, 191, 0.15);
+            color: var(--accent);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid rgba(45, 212, 191, 0.3);
+        }
+
+        .room-cap-badge {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+        }
+
+        .room-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #ffffff;
+        }
+
+        .room-equip-box {
+            font-size: 0.73rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            line-height: 1.4;
+        }
+
+        /* --- Live Hours Badge & Schedule --- */
+        .live-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.25rem 0.65rem;
+            border-radius: 20px;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-open {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, 0.35);
+        }
+
+        .status-closed {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(248, 113, 113, 0.35);
+        }
+
+        .hours-table, .fines-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            background: rgba(2, 6, 23, 0.45);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .hours-table td, .fines-table td, .hours-table th, .fines-table th {
+            padding: 0.45rem 0.65rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .hours-table th, .fines-table th {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--primary);
+            font-weight: 600;
+            text-align: left;
+        }
+
+        /* --- Typing Indicator --- */
+        .typing-dots span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background: var(--text-dim);
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: .2s; }
+        .typing-dots span:nth-child(3) { animation-delay: .4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); background: var(--primary); }
+        }
+
+        /* ==========================================================================
+           4. SUGGESTION CHIPS (QUICK PROMPTS)
+           ========================================================================== */
+        .quick-chips-bar {
+            padding: 0.5rem 1rem;
+            background: #0d172a;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .quick-chips-bar::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .quick-chips-bar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .quick-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 0.28rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .quick-chip:hover {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* ==========================================================================
+           5. INPUT AREA
+           ========================================================================== */
+        .input-area {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.6rem;
+            padding: 0.85rem 1.25rem 1rem 1.25rem;
+            background: #0f1c32;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        #userInput {
+            flex: 1;
+            background: #070d18;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            padding: 0.75rem 1rem;
+            outline: none;
+            resize: none;
+            max-height: 120px;
+            min-height: 44px;
+            line-height: 1.4;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #userInput:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        #userInput::placeholder {
+            color: var(--text-dim);
+        }
+
+        #sendBtn {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            border-radius: var(--radius-md);
+            color: #070d18;
+            font-size: 1.15rem;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        #sendBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px var(--primary-glow);
+        }
+
+        #sendBtn:active {
+            transform: scale(0.94);
+        }
+
+        /* --- Footer Info --- */
+        .app-footer {
+            margin-top: 0.8rem;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .app-footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width: 640px) {
+            body { padding: 0.5rem; }
+            #messages { height: 460px; padding: 0.85rem; }
+            .book-card-grid { grid-template-columns: 1fr; }
+            .bubble-wrap { max-width: 90%; }
+            .header-text h1 { font-size: 1rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-wrapper">
+
+        <!-- Top Configuration Bar (Optional Colab Tunnel) -->
+        <div id="config-bar" class="collapsed">
+            <span><strong>Colab Backend:</strong></span>
+            <input type="text" id="colabUrl" placeholder="Paste ngrok URL: https://xxxx.ngrok-free.app (from librarychatbit.ipynb)" />
+            <button class="btn-sm" onclick="saveUrl()">Save & Connect</button>
+            <button class="btn-sm btn-subtle" onclick="testConnection()">Test API</button>
+            <button class="btn-sm btn-subtle" onclick="toggleConfigBar()">✕</button>
+        </div>
+
+        <!-- Chat Header -->
+        <header class="chat-header">
+            <div class="header-left">
+                <div class="avatar">L</div>
+                <div class="header-text">
+                    <h1>
+                        Library AI Assistant
+                        <span class="badge-verified">80 Books • 8 Shelves</span>
+                    </h1>
+                    <p id="subheading">
+                        <span id="engineStatusText">Built-in Frame Knowledge Engine Active</span>
+                    </p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="mode-pill" id="modeIndicator" title="Running client-side autonomous Frame knowledge base">
+                    <div class="mode-dot"></div>
+                    <span id="modeLabel">Local AI</span>
+                </div>
+                <button class="icon-btn" onclick="toggleConfigBar()" title="Configure Colab Server URL">Config</button>
+                <button class="icon-btn" onclick="showPolicies()" title="Library Policies (Frame 8)">Policy</button>
+                <button class="icon-btn" onclick="resetDatabasePrompt()" title="Reset Simulation Data">Reset</button>
+            </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div id="messages" role="log" aria-live="polite"></div>
+
+        <!-- Quick Suggestion Chips -->
+        <div class="quick-chips-bar">
+            <div class="quick-chip" onclick="quickSend('book a study room')">Book Room</div>
+            <div class="quick-chip" onclick="quickSend('library hours')">Library Hours</div>
+            <div class="quick-chip" onclick="quickSend('overdue fines')">Overdue Fines</div>
+            <div class="quick-chip" onclick="quickSend('browse categories')">Categories</div>
+            <div class="quick-chip" onclick="quickSend('artificial intelligence books')">AI Books</div>
+            <div class="quick-chip" onclick="quickSend('where is Harry Potter?')">Find Book</div>
+            <div class="quick-chip" onclick="quickSend('how to borrow a book')">Borrow Guide</div>
+            <div class="quick-chip" onclick="quickSend('return a book')">Return Book</div>
+            <div class="quick-chip" onclick="quickSend('my borrowing history')">My History</div>
+            <div class="quick-chip" onclick="quickSend('library policies')">Policy Rules</div>
+            <div class="quick-chip" onclick="quickSend('你好，请介绍一下图书馆')">中文服务</div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <textarea id="userInput" rows="1" placeholder="Search books, check hours, book study rooms, check overdue fines, borrow, or return…"></textarea>
+            <button id="sendBtn" onclick="sendMessage()" title="Send Message" aria-label="Send Message">➤</button>
+        </div>
+    </div>
+
+    <div class="app-footer">
+        Simulated Library Knowledge Base for Assignment • Jotform AI Frame Spec • 80 Catalogue Books
+    </div>
+
+    <!-- ==========================================================================
+         6. JAVASCRIPT: CATALOGUE, FRAME AGENT, & COLAB INTEGRATION
+         ========================================================================== -->
+    <script>
+        // ─────────────────────────────────────────────────────────────
+        // 1. FRAME 1: 80-BOOK SIMULATED CATALOGUE SOURCE OF TRUTH
+        // ─────────────────────────────────────────────────────────────
+        const DEFAULT_CATALOGUE = [
+            // Shelf 1: Fiction (B01-B10)
+            { id: "B01", title: "Harry Potter", author: "Rowling", category: "Fiction", shelf: 1, row: 1, total_copies: 5, available_copies: 5, keywords: "Harry Potter, Rowling, fiction, magic, hogwarts" },
+            { id: "B02", title: "The Hobbit", author: "J.R.R. Tolkien", category: "Fiction", shelf: 1, row: 1, total_copies: 5, available_copies: 5, keywords: "The Hobbit, Tolkien, fantasy, adventure, fiction, ring" },
+            { id: "B03", title: "The Little Prince", author: "Antoine de Saint-Exupéry", category: "Fiction", shelf: 1, row: 1, total_copies: 5, available_copies: 5, keywords: "The Little Prince, Saint-Exupéry, fantasy, adventure, fiction" },
+            { id: "B04", title: "Alice's Adventures in Wonderland", author: "Lewis Carroll", category: "Fiction", shelf: 1, row: 1, total_copies: 5, available_copies: 5, keywords: "Alice's Adventures in Wonderland, Lewis Carroll, fantasy, fiction" },
+            { id: "B05", title: "The Chronicles of Narnia", author: "C.S. Lewis", category: "Fiction", shelf: 1, row: 1, total_copies: 5, available_copies: 5, keywords: "The Chronicles of Narnia, C.S. Lewis, fantasy, adventure, fiction, aslan" },
+            { id: "B06", title: "The Hunger Games", author: "Suzanne Collins", category: "Fiction", shelf: 1, row: 2, total_copies: 5, available_copies: 5, keywords: "The Hunger Games, Suzanne Collins, dystopian, adventure, fiction" },
+            { id: "B07", title: "The Maze Runner", author: "James Dashner", category: "Fiction", shelf: 1, row: 2, total_copies: 5, available_copies: 5, keywords: "The Maze Runner, James Dashner, mystery, adventure, fiction" },
+            { id: "B08", title: "Wonder", author: "R.J. Palacio", category: "Fiction", shelf: 1, row: 2, total_copies: 5, available_copies: 5, keywords: "Wonder, R.J. Palacio, friendship, family, fiction" },
+            { id: "B09", title: "The Giver", author: "Lois Lowry", category: "Fiction", shelf: 1, row: 2, total_copies: 5, available_copies: 5, keywords: "The Giver, Lois Lowry, dystopian, society, fiction" },
+            { id: "B10", title: "Charlie and the Chocolate Factory", author: "Roald Dahl", category: "Fiction", shelf: 1, row: 2, total_copies: 5, available_copies: 5, keywords: "Charlie and the Chocolate Factory, Roald Dahl, chocolate, fantasy, fiction" },
+
+            // Shelf 2: Comics (B11-B20)
+            { id: "B11", title: "Spider-Man: Blue", author: "Jeph Loeb", category: "Comics", shelf: 2, row: 1, total_copies: 5, available_copies: 5, keywords: "Spider-Man, Jeph Loeb, superhero, Marvel, comics" },
+            { id: "B12", title: "Batman: Year One", author: "Frank Miller", category: "Comics", shelf: 2, row: 1, total_copies: 5, available_copies: 5, keywords: "Batman, Frank Miller, superhero, DC Comics, comics" },
+            { id: "B13", title: "Superman: Red Son", author: "Mark Millar", category: "Comics", shelf: 2, row: 1, total_copies: 5, available_copies: 5, keywords: "Superman, Mark Millar, superhero, DC Comics, comics" },
+            { id: "B14", title: "One Piece, Volume 1", author: "Eiichiro Oda", category: "Comics", shelf: 2, row: 1, total_copies: 5, available_copies: 5, keywords: "One Piece, Eiichiro Oda, manga, adventure, comics, luffy" },
+            { id: "B15", title: "Naruto, Volume 1", author: "Masashi Kishimoto", category: "Comics", shelf: 2, row: 1, total_copies: 5, available_copies: 5, keywords: "Naruto, Masashi Kishimoto, manga, ninja, adventure, comics" },
+            { id: "B16", title: "Dragon Ball, Volume 1", author: "Akira Toriyama", category: "Comics", shelf: 2, row: 2, total_copies: 5, available_copies: 5, keywords: "Dragon Ball, Akira Toriyama, manga, martial arts, adventure, comics, goku" },
+            { id: "B17", title: "Detective Conan, Volume 1", author: "Gosho Aoyama", category: "Comics", shelf: 2, row: 2, total_copies: 5, available_copies: 5, keywords: "Detective Conan, Gosho Aoyama, manga, mystery, detective, comics" },
+            { id: "B18", title: "Doraemon, Volume 1", author: "Fujiko F. Fujio", category: "Comics", shelf: 2, row: 2, total_copies: 5, available_copies: 5, keywords: "Doraemon, Fujiko F. Fujio, manga, science fiction, comedy, comics" },
+            { id: "B19", title: "My Hero Academia, Volume 1", author: "Kohei Horikoshi", category: "Comics", shelf: 2, row: 2, total_copies: 5, available_copies: 5, keywords: "My Hero Academia, Kohei Horikoshi, manga, superheroes, action, comics" },
+            { id: "B20", title: "Attack on Titan, Volume 1", author: "Hajime Isayama", category: "Comics", shelf: 2, row: 2, total_copies: 5, available_copies: 5, keywords: "Attack on Titan, Hajime Isayama, manga, action, fantasy, comics" },
+
+            // Shelf 3: Encyclopedias (B21-B30)
+            { id: "B21", title: "The World Book Encyclopedia", author: "World Book, Inc.", category: "Encyclopedias", shelf: 3, row: 1, total_copies: 5, available_copies: 5, keywords: "World Book Encyclopedia, world knowledge, history, science, reference" },
+            { id: "B22", title: "Encyclopaedia Britannica", author: "Encyclopaedia Britannica, Inc.", category: "Encyclopedias", shelf: 3, row: 1, total_copies: 5, available_copies: 5, keywords: "Encyclopaedia Britannica, general knowledge, history, science, reference" },
+            { id: "B23", title: "The New Children's Encyclopedia", author: "DK", category: "Encyclopedias", shelf: 3, row: 1, total_copies: 5, available_copies: 5, keywords: "children's encyclopedia, DK, facts, science, geography, reference" },
+            { id: "B24", title: "The Science Encyclopedia", author: "DK", category: "Encyclopedias", shelf: 3, row: 1, total_copies: 5, available_copies: 5, keywords: "science encyclopedia, DK, physics, chemistry, biology, reference" },
+            { id: "B25", title: "The Kingfisher Science Encyclopedia", author: "Kingfisher", category: "Encyclopedias", shelf: 3, row: 1, total_copies: 5, available_copies: 5, keywords: "Kingfisher, science, technology, nature, reference" },
+            { id: "B26", title: "The Encyclopedia of Animals", author: "DK", category: "Encyclopedias", shelf: 3, row: 2, total_copies: 5, available_copies: 5, keywords: "animals, wildlife, mammals, birds, nature, reference" },
+            { id: "B27", title: "The Encyclopedia of Space", author: "DK", category: "Encyclopedias", shelf: 3, row: 2, total_copies: 5, available_copies: 5, keywords: "space, planets, astronomy, universe, reference" },
+            { id: "B28", title: "The Encyclopedia of History", author: "Philip Wilkinson", category: "Encyclopedias", shelf: 3, row: 2, total_copies: 5, available_copies: 5, keywords: "history, ancient civilizations, historical events, world history, reference" },
+            { id: "B29", title: "The Encyclopedia of Geography", author: "DK", category: "Encyclopedias", shelf: 3, row: 2, total_copies: 5, available_copies: 5, keywords: "geography, countries, maps, Earth, environment, reference" },
+            { id: "B30", title: "The Encyclopedia of Technology", author: "DK", category: "Encyclopedias", shelf: 3, row: 2, total_copies: 5, available_copies: 5, keywords: "technology, inventions, computers, engineering, innovation, reference" },
+
+            // Shelf 4: Economics (B31-B40)
+            { id: "B31", title: "Economics", author: "Paul A. Samuelson and William D. Nordhaus", category: "Economics", shelf: 4, row: 1, total_copies: 5, available_copies: 5, keywords: "economics, Samuelson, Nordhaus, economic theory, microeconomics, macroeconomics" },
+            { id: "B32", title: "Principles of Economics", author: "N. Gregory Mankiw", category: "Economics", shelf: 4, row: 1, total_copies: 5, available_copies: 5, keywords: "principles of economics, Mankiw, supply, demand, markets, economics" },
+            { id: "B33", title: "Freakonomics", author: "Steven D. Levitt and Stephen J. Dubner", category: "Economics", shelf: 4, row: 1, total_copies: 5, available_copies: 5, keywords: "Freakonomics, Levitt, Dubner, behavioral economics, incentives, decision making" },
+            { id: "B34", title: "The Wealth of Nations", author: "Adam Smith", category: "Economics", shelf: 4, row: 1, total_copies: 5, available_copies: 5, keywords: "The Wealth of Nations, Adam Smith, classical economics, markets, trade" },
+            { id: "B35", title: "Capital in the Twenty-First Century", author: "Thomas Piketty", category: "Economics", shelf: 4, row: 1, total_copies: 5, available_copies: 5, keywords: "Capital in the Twenty-First Century, Thomas Piketty, income inequality, wealth, economic growth" },
+            { id: "B36", title: "The Undercover Economist", author: "Tim Harford", category: "Economics", shelf: 4, row: 2, total_copies: 5, available_copies: 5, keywords: "The Undercover Economist, Tim Harford, everyday economics, markets, prices" },
+            { id: "B37", title: "Thinking, Fast and Slow", author: "Daniel Kahneman", category: "Economics", shelf: 4, row: 2, total_copies: 5, available_copies: 5, keywords: "Thinking, Fast and Slow, Daniel Kahneman, behavioral economics, psychology, decision making" },
+            { id: "B38", title: "The Big Short", author: "Michael Lewis", category: "Economics", shelf: 4, row: 2, total_copies: 5, available_copies: 5, keywords: "The Big Short, Michael Lewis, financial crisis, banking, investment" },
+            { id: "B39", title: "Poor Economics", author: "Abhijit V. Banerjee and Esther Duflo", category: "Economics", shelf: 4, row: 2, total_copies: 5, available_copies: 5, keywords: "Poor Economics, Banerjee, Duflo, poverty, development economics, policy" },
+            { id: "B40", title: "The Economics Book", author: "DK", category: "Economics", shelf: 4, row: 2, total_copies: 5, available_copies: 5, keywords: "The Economics Book, DK, economic ideas, financial systems, economic history" },
+
+            // Shelf 5: Science (B41-B50)
+            { id: "B41", title: "A Brief History of Time", author: "Stephen Hawking", category: "Science", shelf: 5, row: 1, total_copies: 5, available_copies: 5, keywords: "A Brief History of Time, Stephen Hawking, universe, cosmology, physics, science" },
+            { id: "B42", title: "The Selfish Gene", author: "Richard Dawkins", category: "Science", shelf: 5, row: 1, total_copies: 5, available_copies: 5, keywords: "The Selfish Gene, Richard Dawkins, evolution, genetics, biology, science" },
+            { id: "B43", title: "Cosmos", author: "Carl Sagan", category: "Science", shelf: 5, row: 1, total_copies: 5, available_copies: 5, keywords: "Cosmos, Carl Sagan, astronomy, planets, universe, science" },
+            { id: "B44", title: "On the Origin of Species", author: "Charles Darwin", category: "Science", shelf: 5, row: 1, total_copies: 5, available_copies: 5, keywords: "On the Origin of Species, Charles Darwin, evolution, natural selection, biology" },
+            { id: "B45", title: "The Elegant Universe", author: "Brian Greene", category: "Science", shelf: 5, row: 1, total_copies: 5, available_copies: 5, keywords: "The Elegant Universe, Brian Greene, physics, string theory, universe, science" },
+            { id: "B46", title: "Astrophysics for People in a Hurry", author: "Neil deGrasse Tyson", category: "Science", shelf: 5, row: 2, total_copies: 5, available_copies: 5, keywords: "Astrophysics for People in a Hurry, Neil deGrasse Tyson, stars, galaxies, space, science" },
+            { id: "B47", title: "The Gene: An Intimate History", author: "Siddhartha Mukherjee", category: "Science", shelf: 5, row: 2, total_copies: 5, available_copies: 5, keywords: "The Gene, Siddhartha Mukherjee, genetics, DNA, heredity, biology" },
+            { id: "B48", title: "Silent Spring", author: "Rachel Carson", category: "Science", shelf: 5, row: 2, total_copies: 5, available_copies: 5, keywords: "Silent Spring, Rachel Carson, environment, ecology, pesticides, nature" },
+            { id: "B49", title: "The Body: A Guide for Occupants", author: "Bill Bryson", category: "Science", shelf: 5, row: 2, total_copies: 5, available_copies: 5, keywords: "The Body, Bill Bryson, human body, anatomy, biology, health science" },
+            { id: "B50", title: "Six Easy Pieces", author: "Richard P. Feynman", category: "Science", shelf: 5, row: 2, total_copies: 5, available_copies: 5, keywords: "Six Easy Pieces, Richard Feynman, physics, energy, matter, scientific principles" },
+
+            // Shelf 6: Literature (B51-B60)
+            { id: "B51", title: "Pride and Prejudice", author: "Jane Austen", category: "Literature", shelf: 6, row: 1, total_copies: 5, available_copies: 5, keywords: "Pride and Prejudice, Jane Austen, classic literature, romance, society" },
+            { id: "B52", title: "To Kill a Mockingbird", author: "Harper Lee", category: "Literature", shelf: 6, row: 1, total_copies: 5, available_copies: 5, keywords: "To Kill a Mockingbird, Harper Lee, justice, racism, classic literature" },
+            { id: "B53", title: "1984", author: "George Orwell", category: "Literature", shelf: 6, row: 1, total_copies: 5, available_copies: 5, keywords: "1984, George Orwell, dystopian, political fiction, society, big brother" },
+            { id: "B54", title: "The Great Gatsby", author: "F. Scott Fitzgerald", category: "Literature", shelf: 6, row: 1, total_copies: 5, available_copies: 5, keywords: "The Great Gatsby, F. Scott Fitzgerald, American literature, wealth, society" },
+            { id: "B55", title: "Jane Eyre", author: "Charlotte Brontë", category: "Literature", shelf: 6, row: 1, total_copies: 5, available_copies: 5, keywords: "Jane Eyre, Charlotte Brontë, classic literature, romance, independence" },
+            { id: "B56", title: "Wuthering Heights", author: "Emily Brontë", category: "Literature", shelf: 6, row: 2, total_copies: 5, available_copies: 5, keywords: "Wuthering Heights, Emily Brontë, classic literature, romance, tragedy" },
+            { id: "B57", title: "The Catcher in the Rye", author: "J.D. Salinger", category: "Literature", shelf: 6, row: 2, total_copies: 5, available_copies: 5, keywords: "The Catcher in the Rye, J.D. Salinger, coming of age, society, classic literature" },
+            { id: "B58", title: "Animal Farm", author: "George Orwell", category: "Literature", shelf: 6, row: 2, total_copies: 5, available_copies: 5, keywords: "Animal Farm, George Orwell, political satire, revolution, classic literature" },
+            { id: "B59", title: "The Old Man and the Sea", author: "Ernest Hemingway", category: "Literature", shelf: 6, row: 2, total_copies: 5, available_copies: 5, keywords: "The Old Man and the Sea, Ernest Hemingway, courage, struggle, classic literature" },
+            { id: "B60", title: "Les Misérables", author: "Victor Hugo", category: "Literature", shelf: 6, row: 2, total_copies: 5, available_copies: 5, keywords: "Les Misérables, Victor Hugo, French literature, justice, redemption" },
+
+            // Shelf 7: Philosophy (B61-B70)
+            { id: "B61", title: "The Republic", author: "Plato", category: "Philosophy", shelf: 7, row: 1, total_copies: 5, available_copies: 5, keywords: "The Republic, Plato, justice, political philosophy, ideal society" },
+            { id: "B62", title: "Meditations", author: "Marcus Aurelius", category: "Philosophy", shelf: 7, row: 1, total_copies: 5, available_copies: 5, keywords: "Meditations, Marcus Aurelius, Stoicism, self-discipline, wisdom" },
+            { id: "B63", title: "The Art of War", author: "Sun Tzu", category: "Philosophy", shelf: 7, row: 1, total_copies: 5, available_copies: 5, keywords: "The Art of War, Sun Tzu, strategy, leadership, military philosophy" },
+            { id: "B64", title: "Beyond Good and Evil", author: "Friedrich Nietzsche", category: "Philosophy", shelf: 7, row: 1, total_copies: 5, available_copies: 5, keywords: "Beyond Good and Evil, Friedrich Nietzsche, morality, ethics, philosophical thought" },
+            { id: "B65", title: "Critique of Pure Reason", author: "Immanuel Kant", category: "Philosophy", shelf: 7, row: 1, total_copies: 5, available_copies: 5, keywords: "Critique of Pure Reason, Immanuel Kant, knowledge, reason, epistemology" },
+            { id: "B66", title: "Nicomachean Ethics", author: "Aristotle", category: "Philosophy", shelf: 7, row: 2, total_copies: 5, available_copies: 5, keywords: "Nicomachean Ethics, Aristotle, ethics, virtue, happiness" },
+            { id: "B67", title: "Tao Te Ching", author: "Lao Tzu", category: "Philosophy", shelf: 7, row: 2, total_copies: 5, available_copies: 5, keywords: "Tao Te Ching, Lao Tzu, Taoism, harmony, wisdom" },
+            { id: "B68", title: "The Social Contract", author: "Jean-Jacques Rousseau", category: "Philosophy", shelf: 7, row: 2, total_copies: 5, available_copies: 5, keywords: "The Social Contract, Rousseau, political philosophy, freedom, government" },
+            { id: "B69", title: "An Enquiry Concerning Human Understanding", author: "David Hume", category: "Philosophy", shelf: 7, row: 2, total_copies: 5, available_copies: 5, keywords: "An Enquiry Concerning Human Understanding, David Hume, empiricism, knowledge, reason" },
+            { id: "B70", title: "Man's Search for Meaning", author: "Viktor E. Frankl", category: "Philosophy", shelf: 7, row: 2, total_copies: 5, available_copies: 5, keywords: "Man's Search for Meaning, Viktor Frankl, meaning of life, purpose, human existence" },
+
+            // Shelf 8: Artificial Intelligence (B71-B80)
+            { id: "B71", title: "Artificial Intelligence: A Modern Approach", author: "Stuart Russell and Peter Norvig", category: "Artificial Intelligence", shelf: 8, row: 1, total_copies: 5, available_copies: 5, keywords: "Artificial Intelligence, Russell, Norvig, machine learning, intelligent agents, AI" },
+            { id: "B72", title: "Deep Learning", author: "Ian Goodfellow, Yoshua Bengio, and Aaron Courville", category: "Artificial Intelligence", shelf: 8, row: 1, total_copies: 5, available_copies: 5, keywords: "Deep Learning, neural networks, machine learning, Goodfellow, AI" },
+            { id: "B73", title: "Machine Learning", author: "Tom M. Mitchell", category: "Artificial Intelligence", shelf: 8, row: 1, total_copies: 5, available_copies: 5, keywords: "Machine Learning, Tom Mitchell, algorithms, prediction, AI" },
+            { id: "B74", title: "Life 3.0", author: "Max Tegmark", category: "Artificial Intelligence", shelf: 8, row: 1, total_copies: 5, available_copies: 5, keywords: "Life 3.0, Max Tegmark, future of AI, intelligent machines, technology" },
+            { id: "B75", title: "Human Compatible", author: "Stuart Russell", category: "Artificial Intelligence", shelf: 8, row: 1, total_copies: 5, available_copies: 5, keywords: "Human Compatible, Stuart Russell, AI safety, human values, intelligent systems" },
+            { id: "B76", title: "Superintelligence", author: "Nick Bostrom", category: "Artificial Intelligence", shelf: 8, row: 2, total_copies: 5, available_copies: 5, keywords: "Superintelligence, Nick Bostrom, advanced AI, AI safety, future technology" },
+            { id: "B77", title: "The Alignment Problem", author: "Brian Christian", category: "Artificial Intelligence", shelf: 8, row: 2, total_copies: 5, available_copies: 5, keywords: "The Alignment Problem, Brian Christian, machine learning, AI ethics, alignment" },
+            { id: "B78", title: "Prediction Machines", author: "Ajay Agrawal, Joshua Gans, and Avi Goldfarb", category: "Artificial Intelligence", shelf: 8, row: 2, total_copies: 5, available_copies: 5, keywords: "Prediction Machines, AI economics, machine learning, business, automation" },
+            { id: "B79", title: "AI Superpowers", author: "Kai-Fu Lee", category: "Artificial Intelligence", shelf: 8, row: 2, total_copies: 5, available_copies: 5, keywords: "AI Superpowers, Kai-Fu Lee, China, United States, AI industry" },
+            { id: "B80", title: "Co-Intelligence", author: "Ethan Mollick", category: "Artificial Intelligence", shelf: 8, row: 2, total_copies: 5, available_copies: 5, keywords: "Co-Intelligence, Ethan Mollick, generative AI, AI tools, human collaboration" }
+        ];
+
+        // Categories Location Map (FRAME 2)
+        const CATEGORIES = [
+            { name: "Fiction", shelf: 1, icon: "", desc: "Novels, fantasy, dystopian, & adventures" },
+            { name: "Comics", shelf: 2, icon: "", desc: "Manga, superheroes, & graphic novels" },
+            { name: "Encyclopedias", shelf: 3, icon: "", desc: "General knowledge, space, nature, & history" },
+            { name: "Economics", shelf: 4, icon: "", desc: "Markets, theory, behavioral economics, & finance" },
+            { name: "Science", shelf: 5, icon: "", desc: "Cosmology, physics, biology, & ecology" },
+            { name: "Literature", shelf: 6, icon: "", desc: "Classics, social drama, & masterpieces" },
+            { name: "Philosophy", shelf: 7, icon: "", desc: "Stoicism, ethics, political thought, & wisdom" },
+            { name: "Artificial Intelligence", shelf: 8, icon: "", desc: "Machine learning, deep learning, AI safety, & ethics" }
+        ];
+
+        // 6 Available Study & Discussion Rooms
+        const DEFAULT_ROOMS = [
+            {
+                id: "R01",
+                name: "Discussion Room Alpha",
+                type: "Discussion Room",
+                capacity: "4-6 pax",
+                floor: "Level 2 (East Wing)",
+                equipment: "55\" 4K Smart TV, Glass Whiteboard, Conference Speakerphone, Wireless Casting",
+                suitable_for: "Group presentations, team discussions, group assignments",
+                icon: ""
+            },
+            {
+                id: "R02",
+                name: "Discussion Room Beta",
+                type: "Discussion Room",
+                capacity: "4-6 pax",
+                floor: "Level 2 (East Wing)",
+                equipment: "Ultra-wide Monitor, Glass Whiteboard, International Power Hubs, USB-C Docking",
+                suitable_for: "Group coding, data projects, peer tutoring",
+                icon: ""
+            },
+            {
+                id: "R03",
+                name: "Collaborative Studio Hub",
+                type: "Conference Room",
+                capacity: "6-8 pax",
+                floor: "Level 2 (North Wing)",
+                equipment: "Dual 4K Displays, PTZ Conference Camera, Ceiling Omnidirectional Mic Array, Mobile Whiteboards",
+                suitable_for: "Large group collaboration, student committee meetings, workshops",
+                icon: ""
+            },
+            {
+                id: "R04",
+                name: "Silent Focus Pod 1",
+                type: "Silent Pod",
+                capacity: "1-2 pax",
+                floor: "Level 3 (Quiet Study Commons)",
+                equipment: "Herman Miller Ergonomic Chair, Acoustic Soundproof Paneling, LED Task Light, Fast Qi Charger",
+                suitable_for: "Deep research, dissertation writing, thesis prep",
+                icon: ""
+            },
+            {
+                id: "R05",
+                name: "Silent Focus Pod 2",
+                type: "Silent Pod",
+                capacity: "1-2 pax",
+                floor: "Level 3 (Quiet Study Commons)",
+                equipment: "Motorized Standing Desk, Dual Monitor Arms with 27-inch Displays, ANC Headphones",
+                suitable_for: "Individual intensive revision, exam preparation",
+                icon: ""
+            },
+            {
+                id: "R06",
+                name: "Digital Media & Podcast Lab",
+                type: "Media Lab",
+                capacity: "2-4 pax",
+                floor: "Level 1 (Creative Commons)",
+                equipment: "Shure SM7B Microphones, Rodecaster Pro II Audio Console, Studio Lighting, 4K Video Editing Rig",
+                suitable_for: "Podcast recording, presentation video editing, multimedia assignments",
+                icon: ""
+            }
+        ];
+
+        // ─────────────────────────────────────────────────────────────
+        // 2. PERSISTENCE & LOCAL SIMULATED STORE (FRAMES 5, 6, 7 & ROOMS)
+        // ─────────────────────────────────────────────────────────────
+        function getStoredCatalogue() {
+            const raw = localStorage.getItem('library_catalogue_data');
+            if (!raw) {
+                localStorage.setItem('library_catalogue_data', JSON.stringify(DEFAULT_CATALOGUE));
+                return JSON.parse(JSON.stringify(DEFAULT_CATALOGUE));
+            }
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                return JSON.parse(JSON.stringify(DEFAULT_CATALOGUE));
+            }
+        }
+
+        function saveCatalogue(cat) {
+            localStorage.setItem('library_catalogue_data', JSON.stringify(cat));
+        }
+
+        function getBorrowingRecords() {
+            const raw = localStorage.getItem('library_borrow_records');
+            return raw ? JSON.parse(raw) : [];
+        }
+
+        function saveBorrowingRecords(records) {
+            localStorage.setItem('library_borrow_records', JSON.stringify(records));
+        }
+
+        function getRoomBookings() {
+            const raw = localStorage.getItem('library_room_bookings');
+            return raw ? JSON.parse(raw) : [];
+        }
+
+        function saveRoomBookings(bookings) {
+            localStorage.setItem('library_room_bookings', JSON.stringify(bookings));
+        }
+
+        function resetDatabasePrompt() {
+            if (confirm("Reset the simulated catalogue stock, room reservations, and borrowing records back to default (all 80 books, 5 copies each)?")) {
+                localStorage.removeItem('library_catalogue_data');
+                localStorage.removeItem('library_borrow_records');
+                localStorage.removeItem('library_room_bookings');
+                addMessage("<strong>Catalogue & Simulation Reset:</strong> All 80 books restored to 5 available copies, room reservations cleared, and borrow logs reset.", "ai");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 3. DATE CALCULATIONS (FRAME 5 RULE 5 & 6)
+        //    Borrow_Date = actual transaction date (never hardcoded)
+        //    Due_Date = 1 calendar month later (month-end adjusted)
+        // ─────────────────────────────────────────────────────────────
+        function formatDate(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function computeCalendarMonthDue(borrowDateObj) {
+            const d = new Date(borrowDateObj.getTime());
+            const curDay = d.getDate();
+            const curMonth = d.getMonth();
+            const curYear = d.getFullYear();
+
+            const targetYear = curMonth === 11 ? curYear + 1 : curYear;
+            const targetMonth = (curMonth + 1) % 12;
+
+            // Day 0 of the month after targetMonth gives the last day of targetMonth
+            const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+            const targetDay = Math.min(curDay, daysInTargetMonth);
+
+            return new Date(targetYear, targetMonth, targetDay);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 4. COLAB & BACKEND TUNNEL MANAGEMENT
+        // ─────────────────────────────────────────────────────────────
+        const savedUrl = localStorage.getItem('colabUrl') || '';
+        if (savedUrl) {
+            document.getElementById('colabUrl').value = savedUrl;
+            updateEngineUI(true);
+        }
+
+        function toggleConfigBar() {
+            const bar = document.getElementById('config-bar');
+            bar.classList.toggle('collapsed');
+        }
+
+        function saveUrl() {
+            let url = document.getElementById('colabUrl').value.trim();
+            url = url.replace(/\/+$/, '');
+            document.getElementById('colabUrl').value = url;
+            localStorage.setItem('colabUrl', url);
+            if (url) {
+                addMessage(`<strong>Colab URL configured:</strong> <code>${url}</code><br>The chatbot will attempt to reach your Colab endpoint first (via <code>librarychatbit.ipynb</code>), with instant local fallback.`, 'ai');
+                updateEngineUI(true);
+            } else {
+                addMessage(`Switched to <strong>Built-in Frame Agent Engine</strong>. No external server needed!`, 'ai');
+                updateEngineUI(false);
+            }
+        }
+
+        function updateEngineUI(isColab) {
+            const indicator = document.getElementById('modeIndicator');
+            const label = document.getElementById('modeLabel');
+            const statusText = document.getElementById('engineStatusText');
+
+            if (isColab && document.getElementById('colabUrl').value.trim()) {
+                label.textContent = "Colab API";
+                statusText.innerHTML = "Connected to Google Colab Flask API (with local fallback)";
+            } else {
+                label.textContent = "Local AI";
+                statusText.innerHTML = "Built-in Frame Knowledge Engine Active (80 Books)";
+            }
+        }
+
+        async function testConnection() {
+            let url = document.getElementById('colabUrl').value.trim();
+            if (!url) {
+                alert("Please enter your Colab ngrok URL first.");
+                return;
+            }
+            url = url.replace(/\/+$/, '');
+            document.getElementById('colabUrl').value = url;
+            addMessage(`Pinging Colab server at <code>${escapeHtml(url)}</code>...`, "ai");
+            try {
+                const res = await fetch(`${url}/ping`, { 
+                    method: 'GET',
+                    headers: {
+                        'ngrok-skip-browser-warning': 'true',
+                        'Bypass-Tunnel-Reminder': 'true'
+                    }
+                });
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status} (${res.statusText})`);
+                }
+                const data = await res.json();
+                addMessage(`<strong>Colab Server is Online.</strong><br>Service: <code>${escapeHtml(data.server || 'Google Colab Backend')}</code><br>Books loaded: <strong>${data.books_loaded || 80}</strong> • Training pairs: <strong>${data.training_pairs || 710}</strong>`, 'ai', 'colab');
+                updateEngineUI(true);
+            } catch (err) {
+                addMessage(`<strong>Could not reach Colab:</strong> ${escapeHtml(err.message)}<br><small style="color:var(--text-dim);">Ensure all cells in <code>librarychatbit.ipynb</code> are running and your ngrok tunnel is active. The built-in Local Engine will answer in the meantime.</small>`, 'ai', 'local');
+            }
+        }
+
+        // Helper to format responses (converts raw newlines to <br> if plain text)
+        function formatReply(content) {
+            if (!content) return '';
+            if (typeof content !== 'string') content = String(content);
+            if (/<[a-z][\s\S]*>/i.test(content)) {
+                return content;
+            }
+            return escapeHtml(content).replace(/\n/g, '<br>');
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 5. MESSAGE RENDERING & UI HELPERS
+        // ─────────────────────────────────────────────────────────────
+        function addMessage(htmlContent, who, source = '') {
+            const box = document.getElementById('messages');
+
+            const row = document.createElement('div');
+            row.className = `row ${who}`;
+
+            const av = document.createElement('div');
+            av.className = `row-avatar ${who}`;
+            av.textContent = who === 'ai' ? 'L' : 'U';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'bubble-wrap';
+
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${who}`;
+            bubble.innerHTML = htmlContent;
+
+            const metaRow = document.createElement('div');
+            metaRow.className = 'meta-row';
+            metaRow.style.display = 'flex';
+            metaRow.style.alignItems = 'center';
+            metaRow.style.gap = '0.4rem';
+            metaRow.style.marginTop = '0.15rem';
+            metaRow.style.justifyContent = who === 'user' ? 'flex-end' : 'flex-start';
+
+            const time = document.createElement('span');
+            time.className = 'meta-timestamp';
+            const now = new Date();
+            time.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            metaRow.appendChild(time);
+
+            if (who === 'ai' && source) {
+                const badge = document.createElement('span');
+                badge.className = 'source-badge';
+                badge.style.fontSize = '0.66rem';
+                badge.style.padding = '0.08rem 0.35rem';
+                badge.style.borderRadius = '4px';
+                badge.style.fontWeight = '500';
+                if (source === 'colab') {
+                    badge.style.background = 'rgba(56, 189, 248, 0.15)';
+                    badge.style.color = '#38bdf8';
+                    badge.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+                    badge.textContent = 'Colab AI';
+                } else {
+                    badge.style.background = 'rgba(45, 212, 191, 0.12)';
+                    badge.style.color = '#2dd4bf';
+                    badge.style.border = '1px solid rgba(45, 212, 191, 0.25)';
+                    badge.textContent = 'Local Engine';
+                }
+                metaRow.appendChild(badge);
+            }
+
+            wrap.appendChild(bubble);
+            wrap.appendChild(metaRow);
+            row.appendChild(av);
+            row.appendChild(wrap);
+            box.appendChild(row);
+
+            box.scrollTop = box.scrollHeight;
+            return row;
+        }
+
+        function showTyping() {
+            const box = document.getElementById('messages');
+            const row = document.createElement('div');
+            row.className = 'row ai';
+            row.id = 'typingIndicator';
+
+            const av = document.createElement('div');
+            av.className = 'row-avatar ai';
+            av.textContent = 'L';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'bubble-wrap';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble ai typing-dots';
+            bubble.innerHTML = '<span></span><span></span><span></span>';
+
+            wrap.appendChild(bubble);
+            row.appendChild(av);
+            row.appendChild(wrap);
+            box.appendChild(row);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function removeTyping() {
+            const t = document.getElementById('typingIndicator');
+            if (t) t.remove();
+        }
+
+        function quickSend(text) {
+            document.getElementById('userInput').value = text;
+            sendMessage();
+        }
+
+        // Helper to format book card HTML
+        function renderBookCard(book) {
+            const availClass = book.available_copies > 0 ? 'copies-avail' : 'copies-none';
+            const availText = book.available_copies > 0 ? `${book.available_copies}/${book.total_copies} Available` : 'Unavailable (0 copies)';
+
+            return `
+                <div class="book-card" id="card-${book.id}">
+                    <div class="book-card-header">
+                        <span class="book-id-badge">${book.id}</span>
+                        <span class="book-copies-badge ${availClass}">${availText}</span>
+                    </div>
+                    <div class="book-title">${escapeHtml(book.title)}</div>
+                    <div class="book-author">by ${escapeHtml(book.author)}</div>
+                    <div class="book-location-bar">
+                        Shelf <strong>${book.shelf}</strong> • Row ${book.row} • <em>${book.category}</em>
+                    </div>
+                    <div class="book-actions">
+                        <button class="card-action-btn" onclick="promptBorrowBook('${book.id}')">Borrow Book</button>
+                        <button class="card-action-btn" onclick="quickSend('where is ${escapeJs(book.title)}')">Location</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function escapeJs(text) {
+            if (!text) return '';
+            return text.replace(/'/g, "\\'");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 6. CLIENT-SIDE FRAME INTELLIGENCE ENGINE (FRAMES 1 TO 8)
+        // ─────────────────────────────────────────────────────────────
+        function processLocalAgentQuery(userText) {
+            const catalogue = getStoredCatalogue();
+            const text = userText.trim();
+            const lower = text.toLowerCase();
+            const isChinese = /[\u4e00-\u9fa5]/.test(text);
+
+            // 1. Language: Chinese greeting / general assistance
+            if (isChinese) {
+                if (lower.includes("你好") || lower.includes("您好") || lower.includes("hi") || lower.includes("hello")) {
+                    return `您好！欢迎使用 <strong>图书馆 AI 智能助手</strong>（模拟图书系统）。<br><br>
+                    我可以协助您进行以下操作：<br>
+                    • <strong>查找图书</strong>：输入书名、作者或图书编号（如：<code>B01</code>、<code>哈利波特</code>、<code>Rowling</code>）<br>
+                    • <strong>分类浏览</strong>：输入 <code>分类</code> 查看 8 大书架藏书<br>
+                    • <strong>书架定位</strong>：查询任意图书的准确书架（Shelf）与排号（Row）<br>
+                    • <strong>研讨室预订</strong>：输入 <code>预订房间</code> 预约 6 间研讨室与静音舱（R01–R06）<br>
+                    • <strong>开放时间</strong>：输入 <code>开放时间</code> 查询实时开闭馆状态与时间表<br>
+                    • <strong>逾期罚款</strong>：输入 <code>逾期罚款</code> 查询滞纳金政策与计算器<br>
+                    • <strong>办理借阅</strong>：每位学生最多借 5 本，借期 1 个月<br>
+                    • <strong>归还图书</strong> 与 <strong>借阅历史查询</strong>（支持逾期滞纳金自动测算）<br>
+                    • <strong>政策咨询</strong>：了解借书限额、逾期规则等<br><br>
+                    <em>提示：本馆藏书为课程模拟数据，共 80 本图书。</em>`;
+                }
+            }
+
+            // 2. Greetings
+            if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i.test(lower)) {
+                return `Hello! Welcome to the <strong>Library AI Assistant</strong>.<br><br>
+                Here is what I can do for you:<br>
+                • <strong>Search Catalogue:</strong> Search by title, author, keyword, or Book ID (e.g., <code>B01</code>, <code>Rowling</code>, <code>Economics</code>)<br>
+                • <strong>Browse Categories:</strong> View all 8 shelves (Fiction, Comics, Encyclopedias, Economics, Science, Literature, Philosophy, AI)<br>
+                • <strong>Exact Shelf Location:</strong> Get precise Shelf and Row locations<br>
+                • <strong>Room Bookings:</strong> Reserve discussion rooms &amp; silent focus pods (R01–R06)<br>
+                • <strong>Operating Hours:</strong> Check live open status and weekly schedule<br>
+                • <strong>Overdue Fines:</strong> Check rates, caps, grace periods, or calculate late fees<br>
+                • <strong>Borrow a Book:</strong> Dynamic 1-month due date calculation &amp; limit tracking (max 5 books)<br>
+                • <strong>Return a Book:</strong> Real-time inventory restoration<br>
+                • <strong>Borrowing History:</strong> Track your simulated transactions and late fees<br>
+                • <strong>Library Policies:</strong> Rules on borrowing periods, copies, and conditions<br><br>
+                How can I assist you today?`;
+            }
+
+            // 3. Operating Hours & Live Status
+            if (lower.includes("hour") || lower.includes("opening") || lower.includes("operating time") || 
+                lower.includes("open today") || lower.includes("when do you open") || lower.includes("when do you close") || 
+                lower.includes("what time do you open") || lower.includes("what time do you close") || lower.includes("schedule") ||
+                lower.includes("开放时间") || lower.includes("营业时间") || lower.includes("几点关门") || lower.includes("几点开门") || lower.includes("开门时间")) {
+                return handleHoursCommand(isChinese);
+            }
+
+            // 4. Overdue Fines & Late Return Fees
+            if (lower.includes("fine") || lower.includes("fines") || lower.includes("overdue fee") || lower.includes("late fee") || 
+                lower.includes("late return") || lower.includes("penalty") || lower.includes("overdue charge") ||
+                lower.includes("罚款") || lower.includes("滞纳金") || lower.includes("逾期费用") || lower.includes("逾期")) {
+                return handleFinesCommand(text, lower, isChinese);
+            }
+
+            // 5. Discussion & Study Room Booking
+            if (lower.includes("room") || lower.includes("rooms") || lower.includes("pod") || lower.includes("pods") || 
+                lower.includes("media lab") || lower.includes("study space") || lower.includes("discussion room") || 
+                lower.includes("自习室") || lower.includes("研讨室") || lower.includes("预订房间") || lower.includes("订房") || lower.includes("预约房间")) {
+                return handleRoomCommand(text, lower, isChinese);
+            }
+
+            // 6. FRAME 8: Library Policies FAQ
+            if (lower.includes("policy") || lower.includes("policies") || lower.includes("rules") || lower.includes("rule") || 
+                lower.includes("how many books") || lower.includes("borrow limit") || lower.includes("borrowing period") ||
+                lower.includes("due date") || lower.includes("规则") || lower.includes("政策") || lower.includes("借书规则")) {
+                return formatPoliciesReply(isChinese);
+            }
+
+            // 4. FRAME 2: Browse All Categories
+            if (lower === "categories" || lower === "category" || lower.includes("browse") || lower.includes("shelves") || 
+                lower.includes("all categories") || lower.includes("list categories") || lower.includes("分类") || lower.includes("书架")) {
+                return formatCategoriesList(isChinese);
+            }
+
+            // 5. Category-Specific Book Listing (e.g. "Fiction", "Comics", "Science books", "Artificial intelligence")
+            const matchedCat = CATEGORIES.find(c => 
+                lower.includes(c.name.toLowerCase()) || 
+                (c.name === "Artificial Intelligence" && (lower.includes("ai books") || lower.includes("ai") || lower.includes("artificial intelligence"))) ||
+                (c.name === "Fiction" && (lower.includes("小说") || lower.includes("fiction"))) ||
+                (c.name === "Comics" && (lower.includes("漫画") || lower.includes("manga") || lower.includes("comic"))) ||
+                (c.name === "Encyclopedias" && (lower.includes("百科") || lower.includes("encyclopedia"))) ||
+                (c.name === "Economics" && (lower.includes("经济") || lower.includes("economic"))) ||
+                (c.name === "Science" && (lower.includes("科学") || lower.includes("science"))) ||
+                (c.name === "Literature" && (lower.includes("文学") || lower.includes("literature"))) ||
+                (c.name === "Philosophy" && (lower.includes("哲学") || lower.includes("philosophy")))
+            );
+
+            if (matchedCat && (lower.includes("book") || lower.includes("show") || lower.includes("shelf") || lower.includes("list") || lower.includes("category") || lower.includes("browse") || lower.includes("书") || lower.includes("看") || lower.length <= matchedCat.name.length + 5)) {
+                return formatCategoryBooks(matchedCat, catalogue, isChinese);
+            }
+
+            // 6. FRAME 5: Borrowing Queries & Commands
+            if (lower.startsWith("borrow") || lower.includes("i want to borrow") || lower.includes("can i borrow") || lower.includes("借书") || lower.includes("想借")) {
+                return handleBorrowCommand(text, lower, catalogue, isChinese);
+            }
+
+            // 7. FRAME 6: Returning Queries & Commands
+            if (lower.startsWith("return") || lower.includes("i want to return") || lower.includes("how to return") || lower.includes("还书") || lower.includes("归还")) {
+                return handleReturnCommand(text, lower, catalogue, isChinese);
+            }
+
+            // 8. FRAME 7: Borrowing History Queries
+            if (lower.includes("history") || lower.includes("my records") || lower.includes("borrowed books") || lower.includes("借阅历史") || lower.includes("借书记录")) {
+                return handleHistoryCommand(text, lower, isChinese);
+            }
+
+            // 9. FRAME 3: Location Inquiries (e.g. "where is B01", "location of Harry Potter", "where can I find 1984")
+            if (lower.includes("where is") || lower.includes("location of") || lower.includes("shelf for") || lower.includes("where can i find") || lower.includes("在哪") || lower.includes("位置")) {
+                return handleLocationQuery(lower, catalogue, isChinese);
+            }
+
+            // 10. Direct Book ID Lookup (e.g. "B01", "b72", "Book B14")
+            const idMatch = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
+            if (idMatch) {
+                const bookId = "B" + String(idMatch[1]).padStart(2, '0');
+                const book = catalogue.find(b => b.id.toUpperCase() === bookId.toUpperCase());
+                if (book) {
+                    return `
+                        <div>
+                            Found exact record for <strong>Book ID: ${book.id}</strong>:
+                            <div class="book-card-grid">${renderBookCard(book)}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            // 11. FRAME 4: Full Catalogue Search (Title, Author, Keywords, Subject)
+            return handleSearchQuery(text, lower, catalogue, isChinese);
+        }
+
+        // --- Frame 8: Format Policies ---
+        function formatPoliciesReply(isChinese) {
+            if (isChinese) {
+                return `
+                    <strong>📋 图书馆借阅规则与政策（Frame 8）</strong><br><br>
+                    • <strong>最多借阅限额：</strong> 每位学生在同一时间内最多借阅 <strong>5 本图书</strong>。<br>
+                    • <strong>借阅期限：</strong> 自借阅之日起 <strong>1 个自然月</strong>（若下月没有对应日期，自动顺延调整为该月的最后一天，如 1月31日 借出，归还期限为 2月28日，闰年为 2月29日）。<br>
+                    • <strong>归还日期：</strong> 仅在实际确认归还时记录；未归还前保持为空。<br>
+                    • <strong>库存借阅条件：</strong> 仅在 <code>Available_Copies &gt; 0</code> 时允许借阅。<br>
+                    • <strong>模拟性质说明：</strong> 本系统藏书共 80 种，所列数据均为实验模拟，绝不凭空捏造未收录书目。
+                `;
+            }
+            return `
+                <strong>📋 Library Policy Settings (Frame 8)</strong><br><br>
+                • <strong>Maximum borrowing limit:</strong> 5 books per student at one time.<br>
+                • <strong>Borrowing period:</strong> Exactly <strong>one calendar month</strong> from the actual borrowing date.<br>
+                • <strong>Due date rule:</strong> One calendar month after <code>Borrow_Date</code>, adjusted to the last day of the following month when necessary (e.g., Jan 31 becomes Feb 28, or Feb 29 in a leap year).<br>
+                • <strong>Return date:</strong> Recorded only when the return transaction is actually confirmed; remains blank while borrowed.<br>
+                • <strong>Availability:</strong> A book can only be borrowed if <code>Available_Copies &gt; 0</code>.<br>
+                • <strong>Simulated Assignment Scope:</strong> The catalogue contains 80 pre-defined books across 8 shelves. Books outside this catalogue cannot be borrowed or invented.
+            `;
+        }
+
+        // --- Frame 2: Format Categories List ---
+        function formatCategoriesList(isChinese) {
+            let html = isChinese ? 
+                `<strong>图书馆 8 大分类与书架分布（Frame 2）：</strong><br>点击任一分类即可查看该书架上的图书：` :
+                `<strong>Library Categories &amp; Shelf Map (Frame 2):</strong><br>Click any category below or type its name to view all 10 books on that shelf:`;
+
+            html += `<div class="category-chip-grid">`;
+            CATEGORIES.forEach(c => {
+                html += `<div class="cat-chip" onclick="quickSend('${c.name} books')"><strong>${c.name}</strong> (Shelf ${c.shelf})</div>`;
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        // --- Category Books View ---
+        function formatCategoryBooks(cat, catalogue, isChinese) {
+            const books = catalogue.filter(b => b.category.toLowerCase() === cat.name.toLowerCase());
+            const row1 = books.filter(b => b.row === 1);
+            const row2 = books.filter(b => b.row === 2);
+
+            let html = `
+                <div>
+                    <strong>Category: ${cat.name} (Shelf ${cat.shelf})</strong><br>
+                    <span style="font-size:0.8rem; color:var(--text-muted);">${cat.desc} • 10 Books Total (Row 1: 5 | Row 2: 5)</span>
+                    
+                    <div style="margin-top: 0.8rem; font-size: 0.82rem; font-weight: 600; color: var(--primary);">Row 1 Books:</div>
+                    <div class="book-card-grid">
+                        ${row1.map(renderBookCard).join('')}
+                    </div>
+
+                    <div style="margin-top: 1rem; font-size: 0.82rem; font-weight: 600; color: var(--primary);">Row 2 Books:</div>
+                    <div class="book-card-grid">
+                        ${row2.map(renderBookCard).join('')}
+                    </div>
+                </div>
+            `;
+            return html;
+        }
+
+        // --- Frame 3: Location Handler ---
+        function handleLocationQuery(lower, catalogue, isChinese) {
+            // Find book in query
+            const match = catalogue.find(b => 
+                lower.includes(b.id.toLowerCase()) || 
+                lower.includes(b.title.toLowerCase())
+            );
+
+            if (match) {
+                return `
+                    <strong>Location for "${match.title}" (${match.id}):</strong><br><br>
+                    • <strong>Shelf:</strong> Shelf ${match.shelf} (${match.category})<br>
+                    • <strong>Row:</strong> Row ${match.row}<br>
+                    • <strong>Availability:</strong> ${match.available_copies} of ${match.total_copies} copies currently available.<br><br>
+                    <em>(Frame 3 Compliance: Returned Row and Shelf exactly as recorded in BOOK_INFORMATION.)</em>
+                `;
+            }
+
+            // Category location lookup
+            const catMatch = CATEGORIES.find(c => lower.includes(c.name.toLowerCase()));
+            if (catMatch) {
+                return `
+                    <strong>Category Location Map (Frame 2 &amp; 3):</strong><br><br>
+                    All <strong>${catMatch.name}</strong> books are located on <strong>Shelf ${catMatch.shelf}</strong> (Row 1 and Row 2).<br>
+                    Would you like me to display all books on Shelf ${catMatch.shelf}?
+                `;
+            }
+
+            return `<strong>Book not found in catalogue:</strong> According to <em>Frame 3 Rule 4 &amp; 5</em>, I only provide shelf locations for verified books in BOOK_INFORMATION. This title is not listed in our simulated 80-book catalogue, and I will not invent or guess a location.`;
+        }
+
+        // --- Frame 5: Borrowing Handler ---
+        function handleBorrowCommand(text, lower, catalogue, isChinese) {
+            // Parse Book ID or Title from text
+            // e.g. "borrow B01 for TP123456", "borrow Harry Potter", "borrow B71"
+            let book = null;
+            const idMatch = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
+            if (idMatch) {
+                const bookId = "B" + String(idMatch[1]).padStart(2, '0');
+                book = catalogue.find(b => b.id.toUpperCase() === bookId.toUpperCase());
+            }
+
+            if (!book) {
+                book = catalogue.find(b => lower.includes(b.title.toLowerCase()));
+            }
+
+            // If no specific book identified, give instructions
+            if (!book) {
+                return `
+                    <strong>Book Borrowing Service (Frame 5)</strong><br><br>
+                    To borrow a book from our catalogue, please provide the <strong>Book ID</strong> (e.g. <code>B01</code>, <code>B71</code>) or the exact Title, along with your <strong>Student ID</strong>.<br><br>
+                    <em>Example:</em><br>
+                    • <code>Borrow B01 for TP012345 (John Doe)</code><br>
+                    • Or click the <strong>Borrow Book</strong> button on any book card.
+                `;
+            }
+
+            // Rule 2: Check Available_Copies
+            if (book.available_copies <= 0) {
+                return `<strong>Cannot Borrow:</strong> "${book.title}" (${book.id}) currently has <strong>0 available copies</strong> (Out of Stock). As per <em>Frame 5 Rule 2</em>, borrowing cannot be confirmed when available copies are zero.`;
+            }
+
+            // Extract student ID or prompt
+            const studentMatch = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+            const studentId = studentMatch ? studentMatch[0].toUpperCase() : prompt("Please enter your Student ID (e.g. TP012345) to complete the borrowing simulation:");
+
+            if (!studentId) {
+                return `Borrowing paused: Student ID is required to verify student identity (Frame 5 Rule 3).`;
+            }
+
+            // Rule 3: Check student borrowing limit (max 5 active books)
+            const allRecords = getBorrowingRecords();
+            const studentActiveRecords = allRecords.filter(r => r.student_id.toUpperCase() === studentId.toUpperCase() && r.borrowing_status === "Borrowed");
+            if (studentActiveRecords.length >= 5) {
+                return `<strong>Borrowing Limit Reached:</strong> Student <strong>${studentId}</strong> already has ${studentActiveRecords.length} active borrowed books. Under <em>Frame 8 Policies</em>, the maximum limit is 5 books per student at one time. Please return a book before borrowing another.`;
+            }
+
+            // Rule 5 & 6: Compute dates dynamically
+            const today = new Date();
+            const borrowDateStr = formatDate(today);
+            const dueDateObj = computeCalendarMonthDue(today);
+            const dueDateStr = formatDate(dueDateObj);
+
+            // Generate unique Borrow_ID
+            const borrowId = "BRW-" + today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0') + "-" + Math.floor(1000 + Math.random() * 9000);
+
+            // Update catalogue stock
+            book.available_copies -= 1;
+            saveCatalogue(catalogue);
+
+            // Save transaction record
+            const newRecord = {
+                borrow_id: borrowId,
+                student_id: studentId,
+                book_id: book.id,
+                book_title: book.title,
+                borrow_date: borrowDateStr,
+                due_date: dueDateStr,
+                return_date: "",
+                borrowing_status: "Borrowed"
+            };
+            allRecords.push(newRecord);
+            saveBorrowingRecords(allRecords);
+
+            return `
+                <div class="receipt-card">
+                    <div class="receipt-title">
+                        <span>Borrowing Transaction Confirmed (Frame 5)</span>
+                    </div>
+                    <table class="receipt-table">
+                        <tr><td>Borrow ID:</td><td><code>${borrowId}</code></td></tr>
+                        <tr><td>Student ID:</td><td>${studentId}</td></tr>
+                        <tr><td>Book ID:</td><td>${book.id}</td></tr>
+                        <tr><td>Book Title:</td><td>${book.title}</td></tr>
+                        <tr><td>Shelf Location:</td><td>Shelf ${book.shelf}, Row ${book.row}</td></tr>
+                        <tr><td>Borrow Date:</td><td>${borrowDateStr} <em>(Current Date)</em></td></tr>
+                        <tr><td>Due Date:</td><td>${dueDateStr} <em>(1 Calendar Month)</em></td></tr>
+                        <tr><td>Return Date:</td><td><em>[Blank until returned]</em></td></tr>
+                        <tr><td>Status:</td><td><span class="status-badge status-borrowed">Borrowed</span></td></tr>
+                        <tr><td>Remaining Stock:</td><td>${book.available_copies} / ${book.total_copies} copies</td></tr>
+                    </table>
+                    <div class="receipt-note">
+                        Simulation Notice (Frame 5 Rule 10): This borrowing process is a simulated transaction recorded for assignment demonstration.
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Frame 6: Returning Handler ---
+        function handleReturnCommand(text, lower, catalogue, isChinese) {
+            const allRecords = getBorrowingRecords();
+            const activeRecords = allRecords.filter(r => r.borrowing_status === "Borrowed");
+
+            // Look for student ID in query or prompt
+            const studentMatch = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+            let studentId = studentMatch ? studentMatch[0].toUpperCase() : null;
+
+            if (!studentId && activeRecords.length > 0) {
+                // Check if only 1 student has active records
+                const uniqueStudents = [...new Set(activeRecords.map(r => r.student_id))];
+                if (uniqueStudents.length === 1) {
+                    studentId = uniqueStudents[0];
+                }
+            }
+
+            if (!studentId) {
+                studentId = prompt("Please enter your Student ID (e.g. TP012345) to look up your active borrowed books:");
+            }
+
+            if (!studentId) {
+                return `Return paused: Please provide your Student ID to find active borrowing records.`;
+            }
+
+            const studentBorrows = allRecords.filter(r => r.student_id.toUpperCase() === studentId.toUpperCase() && r.borrowing_status === "Borrowed");
+
+            if (studentBorrows.length === 0) {
+                return `<strong>No Active Records:</strong> System could not find an active borrowing record for Student ID <strong>${studentId}</strong> (Frame 6 Rule 7).`;
+            }
+
+            // Find which book they want to return (or return the first/only active one)
+            let recordToReturn = null;
+            const idMatch = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
+            if (idMatch) {
+                const bId = "B" + String(idMatch[1]).padStart(2, '0');
+                recordToReturn = studentBorrows.find(r => r.book_id.toUpperCase() === bId.toUpperCase());
+            }
+
+            if (!recordToReturn) {
+                recordToReturn = studentBorrows.find(r => lower.includes(r.book_title.toLowerCase()));
+            }
+
+            if (!recordToReturn && studentBorrows.length === 1) {
+                recordToReturn = studentBorrows[0];
+            }
+
+            if (!recordToReturn) {
+                // Present list of active books to choose
+                let choicesHtml = `<strong>Student ${studentId} has ${studentBorrows.length} active borrowed books:</strong><br><br>`;
+                studentBorrows.forEach(r => {
+                    choicesHtml += `• <strong>${r.book_id}: ${r.book_title}</strong> (Borrowed: ${r.borrow_date}, Due: ${r.due_date}) <button class="btn-sm" style="padding:0.15rem 0.5rem; margin-left:0.5rem;" onclick="quickSend('return ${r.book_id} for ${studentId}')">Return This</button><br>`;
+                });
+                choicesHtml += `<br>Please specify which book you wish to return.`;
+                return choicesHtml;
+            }
+
+            // Confirm return
+            const today = new Date();
+            const returnDateStr = formatDate(today);
+            const dueDateObj = new Date(recordToReturn.due_date);
+
+            // Rule 5: Returned vs Returned Late
+            const isLate = today > dueDateObj;
+            const newStatus = isLate ? "Returned Late" : "Returned";
+
+            recordToReturn.return_date = returnDateStr;
+            recordToReturn.borrowing_status = newStatus;
+            saveBorrowingRecords(allRecords);
+
+            // Rule 6: Restore inventory
+            const book = catalogue.find(b => b.id.toUpperCase() === recordToReturn.book_id.toUpperCase());
+            if (book) {
+                book.available_copies = Math.min(book.total_copies, book.available_copies + 1);
+                saveCatalogue(catalogue);
+            }
+
+            return `
+                <div class="receipt-card" style="border-color: var(--success);">
+                    <div class="receipt-title" style="color: var(--success); border-color: rgba(52, 211, 153, 0.2);">
+                        <span>Book Return Confirmed (Frame 6)</span>
+                    </div>
+                    <table class="receipt-table">
+                        <tr><td>Borrow ID:</td><td><code>${recordToReturn.borrow_id}</code></td></tr>
+                        <tr><td>Student ID:</td><td>${studentId}</td></tr>
+                        <tr><td>Book Title:</td><td>${recordToReturn.book_title} (${recordToReturn.book_id})</td></tr>
+                        <tr><td>Return Date:</td><td>${returnDateStr} <em>(Confirmed Today)</em></td></tr>
+                        <tr><td>Due Date:</td><td>${recordToReturn.due_date}</td></tr>
+                        <tr><td>Status:</td><td><span class="status-badge status-returned">${newStatus}</span></td></tr>
+                        <tr><td>Restored Inventory:</td><td>${book ? book.available_copies : 5} / 5 copies available</td></tr>
+                    </table>
+                    <div class="receipt-note">
+                        Simulation Notice (Frame 6 Rule 8): Return processing has completed in the simulated assignment store.
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Frame 7: Borrowing History Handler ---
+        function handleHistoryCommand(text, lower, isChinese) {
+            const allRecords = getBorrowingRecords();
+            const studentMatch = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+            let studentId = studentMatch ? studentMatch[0].toUpperCase() : null;
+
+            if (!studentId) {
+                studentId = prompt("Please enter your Student ID (e.g. TP012345) to view your borrowing history:");
+            }
+
+            if (!studentId) {
+                return `Please enter your Student ID to view your borrowing history (Frame 7 Rule 1).`;
+            }
+
+            const studentRecords = allRecords.filter(r => r.student_id.toUpperCase() === studentId.toUpperCase());
+
+            if (studentRecords.length === 0) {
+                return `<strong>Borrowing History for Student ID: ${studentId}</strong><br><br>No borrowing history was found for this student (Frame 7 Rule 7). You haven't borrowed any books yet.`;
+            }
+
+            const today = new Date();
+            let html = `
+                <strong>Borrowing History for Student ID: ${studentId} (Frame 7)</strong><br>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Borrow Date</th>
+                            <th>Due Date</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            let totalFines = 0;
+            studentRecords.forEach(r => {
+                let displayStatus = r.borrowing_status;
+                let badgeClass = 'status-borrowed';
+
+                // Rule 5: Dynamic Overdue calculation and fine computation
+                if (!r.return_date && new Date(r.due_date) < today) {
+                    const diffTime = Math.abs(today - new Date(r.due_date));
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const chargeableDays = Math.max(0, diffDays - 1); // 1-day grace period
+                    const fine = Math.min(25.00, chargeableDays * 0.50);
+                    totalFines += fine;
+                    displayStatus = `Overdue (${diffDays}d late • Fine: RM ${fine.toFixed(2)})`;
+                    badgeClass = 'status-overdue';
+                } else if (r.borrowing_status.includes("Returned")) {
+                    badgeClass = 'status-returned';
+                }
+
+                html += `
+                    <tr>
+                        <td><strong>${escapeHtml(r.book_title)}</strong> (${r.book_id})</td>
+                        <td>${r.borrow_date}</td>
+                        <td>${r.due_date}</td>
+                        <td>${r.return_date || '<em>Not returned</em>'}</td>
+                        <td><span class="status-badge ${badgeClass}">${displayStatus}</span></td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            if (totalFines > 0) {
+                html += `
+                    <div style="margin-top:0.6rem; padding:0.5rem 0.75rem; background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.35); border-radius:6px; font-size:0.8rem; color:#fca5a5;">
+                        <strong>Outstanding Overdue Fines: RM ${totalFines.toFixed(2)}</strong><br>
+                        Fines can be paid through the Student Portal or at the Level 1 Service Counter. Unpaid fines exceeding RM 10.00 will suspend borrowing and room booking access.
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="font-size:0.72rem; color:var(--text-dim); margin-top:0.4rem;">
+                    * Frame 7 Rule 4: Blank return dates indicate books currently out on loan. Daily fine rate: RM 0.50 / day.
+                </div>
+            `;
+            return html;
+        }
+
+        // --- Frame 4: Search Handler ---
+        function handleSearchQuery(rawText, lower, catalogue, isChinese) {
+            // Clean common stop words
+            let query = lower
+                .replace(/^(search for|search|find|look for|do you have|can you find|is there|show me|tell me about)\s+/i, '')
+                .replace(/[?!.,]/g, '')
+                .trim();
+
+            if (!query) {
+                return "Please enter a title, author, category, or keyword to search our catalogue.";
+            }
+
+            // Exact or substring match across fields
+            const matches = catalogue.filter(b => {
+                return b.id.toLowerCase() === query ||
+                       b.title.toLowerCase().includes(query) ||
+                       b.author.toLowerCase().includes(query) ||
+                       b.category.toLowerCase().includes(query) ||
+                       b.keywords.toLowerCase().includes(query);
+            });
+
+            if (matches.length > 0) {
+                return `
+                    <div>
+                        Found <strong>${matches.length}</strong> matching book(s) in BOOK_INFORMATION:
+                        <div class="book-card-grid">
+                            ${matches.map(renderBookCard).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Fuzzy keyword split search
+            const tokens = query.split(/\s+/).filter(t => t.length > 2);
+            const tokenMatches = catalogue.filter(b => {
+                return tokens.some(tok => 
+                    b.title.toLowerCase().includes(tok) || 
+                    b.author.toLowerCase().includes(tok) || 
+                    b.keywords.toLowerCase().includes(tok)
+                );
+            });
+
+            if (tokenMatches.length > 0) {
+                return `
+                    <div>
+                        Exact search for "<em>${escapeHtml(query)}</em>" had no direct match, but here are <strong>${tokenMatches.length}</strong> related books found in the catalogue:
+                        <div class="book-card-grid">
+                            ${tokenMatches.map(renderBookCard).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Frame 4 Rule 7 compliance
+            return `
+                <strong>Book Not Found:</strong> No book matching "<em>${escapeHtml(query)}</em>" was found in the current simulated catalogue.<br><br>
+                <em>Frame 4 Rule 7 Compliance:</em> The chatbot must never fabricate or invent books outside our 80-book inventory.<br>
+                You can type <code>categories</code> to browse available sections or search for topics like <em>AI, Science, Economics, Fiction, Comics, Philosophy</em>.
+            `;
+        }
+
+        function promptBorrowBook(bookId) {
+            quickSend(`borrow ${bookId}`);
+        }
+
+        function showPolicies() {
+            quickSend('library policies');
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // FRAME 9: DISCUSSION & STUDY ROOM BOOKING HANDLER
+        // ─────────────────────────────────────────────────────────────
+        function handleRoomCommand(text, lower, isChinese) {
+            const allBookings = getRoomBookings();
+
+            // 1. Cancellation
+            if (lower.includes("cancel")) {
+                const bkMatch = text.match(/\b(BK-\d{8}-\d{4})\b/i);
+                if (bkMatch) {
+                    const bookingId = bkMatch[1].toUpperCase();
+                    const idx = allBookings.findIndex(b => b.booking_id === bookingId);
+                    if (idx !== -1) {
+                        const removed = allBookings.splice(idx, 1)[0];
+                        saveRoomBookings(allBookings);
+                        return `<strong>Room Reservation Cancelled:</strong> Booking reference <code>${bookingId}</code> for ${removed.room_name} (${removed.room_id}) has been cancelled. The room is now available for other students.`;
+                    }
+                    return `Booking reference <code>${bookingId}</code> was not found. Please verify the code and try again.`;
+                }
+                return `To cancel a room, please provide the booking reference, e.g. <code>cancel room BK-20261026-1234</code>.`;
+            }
+
+            // 2. View my room bookings
+            if (lower.includes("my room") || lower.includes("my bookings") || lower.includes("view bookings") || lower.includes("check room")) {
+                const studentMatch = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+                let studentId = studentMatch ? studentMatch[0].toUpperCase() : null;
+                if (!studentId && allBookings.length > 0) {
+                    studentId = allBookings[allBookings.length - 1].student_id;
+                }
+                if (!studentId) {
+                    studentId = prompt("Please enter your Student ID (e.g. TP012345) to view your room reservations:");
+                }
+                if (!studentId) return "Please provide your Student ID to view room bookings.";
+
+                const studentBookings = allBookings.filter(b => b.student_id.toUpperCase() === studentId.toUpperCase());
+                if (studentBookings.length === 0) {
+                    return `No active room reservations found for Student ID: <strong>${studentId}</strong>. You can book a study room using the chips below.`;
+                }
+
+                let html = `<strong>Active Room Reservations for ${studentId}:</strong><br>`;
+                studentBookings.forEach(b => {
+                    html += `
+                        <div class="receipt-card" style="margin-top:0.4rem; border-color:var(--accent);">
+                            <div class="receipt-title" style="color:var(--accent);">
+                                <span>Ref: <code>${b.booking_id}</code></span>
+                            </div>
+                            <table class="receipt-table">
+                                <tr><td>Room:</td><td><strong>${b.room_name}</strong> (${b.room_id})</td></tr>
+                                <tr><td>Date & Slot:</td><td>${b.date} • ${b.slot}</td></tr>
+                                <tr><td>Smart Door PIN:</td><td><strong style="color:var(--accent); font-size:1.05rem; letter-spacing:1px;">${b.pin}</strong></td></tr>
+                            </table>
+                            <button class="card-action-btn" style="margin-top:0.4rem; background:rgba(248,113,113,0.15); color:var(--danger); border-color:rgba(248,113,113,0.3);" onclick="quickSend('cancel room ${b.booking_id}')">Cancel Booking</button>
+                        </div>
+                    `;
+                });
+                return html;
+            }
+
+            // 3. Direct booking command: e.g. "book R01 for TP123456"
+            const roomMatch = text.match(/\b(R0[1-6])\b/i);
+            if (roomMatch) {
+                const roomId = roomMatch[1].toUpperCase();
+                const room = DEFAULT_ROOMS.find(r => r.id === roomId);
+                if (!room) return `Room ${roomId} not found. Please choose between R01 and R06.`;
+
+                const studentMatch = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+                let studentId = studentMatch ? studentMatch[0].toUpperCase() : null;
+                if (!studentId) {
+                    studentId = prompt(`Enter your Student ID to reserve ${room.name} (${room.id}):`);
+                }
+                if (!studentId) return "Student ID is required to complete room reservation.";
+
+                const today = new Date();
+                const todayStr = formatDate(today);
+                const defaultSlot = "02:00 PM - 04:00 PM";
+                const pin = Math.floor(1000 + Math.random() * 9000);
+                const bookingId = "BK-" + today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0') + "-" + Math.floor(1000 + Math.random() * 9000);
+
+                const newBooking = {
+                    booking_id: bookingId,
+                    room_id: room.id,
+                    room_name: room.name,
+                    student_id: studentId,
+                    date: todayStr,
+                    slot: defaultSlot,
+                    pin: pin,
+                    created_at: new Date().toISOString()
+                };
+
+                allBookings.push(newBooking);
+                saveRoomBookings(allBookings);
+
+                return `
+                    <div class="receipt-card">
+                        <div class="receipt-title">
+                            <span>Room Reservation Confirmed</span>
+                        </div>
+                        <table class="receipt-table">
+                            <tr><td>Booking Ref:</td><td><code>${bookingId}</code></td></tr>
+                            <tr><td>Student ID:</td><td><strong>${studentId}</strong></td></tr>
+                            <tr><td>Room:</td><td><strong>${room.name}</strong> (${room.id})</td></tr>
+                            <tr><td>Location:</td><td>${room.floor}</td></tr>
+                            <tr><td>Capacity:</td><td>${room.capacity}</td></tr>
+                            <tr><td>Date:</td><td>${todayStr}</td></tr>
+                            <tr><td>Reserved Slot:</td><td><strong>${defaultSlot}</strong></td></tr>
+                            <tr><td>Smart Door PIN:</td><td><strong style="color:var(--accent); font-size:1.15rem; letter-spacing:2px;">${pin}</strong></td></tr>
+                        </table>
+                        <div class="receipt-note">
+                            Check-in Policy: Enter your 4-digit Door PIN upon arrival. Please check in within 15 minutes of session start or the room will be auto-released.
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. Default: Render all 6 room cards
+            let html = isChinese ?
+                `<strong>图书馆研讨室与自习舱（共 6 间可用）：</strong><br>每名学生每日限借 1 次（上限 2 小时），点击下方按钮即可快速预订：` :
+                `<strong>APU Library Discussion &amp; Study Rooms (6 Rooms Available):</strong><br>Click <em>Book This Room</em> below or type <code>book R01 for TP123456</code>:`;
+
+            html += `<div class="room-card-grid">`;
+            DEFAULT_ROOMS.forEach(r => {
+                html += renderRoomCard(r);
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        function renderRoomCard(room) {
+            return `
+                <div class="room-card" id="room-${room.id}">
+                    <div class="room-header">
+                        <span class="room-id-badge">${room.id}</span>
+                        <span class="room-cap-badge">${room.capacity}</span>
+                    </div>
+                    <div class="room-title">${escapeHtml(room.name)}</div>
+                    <div style="font-size:0.75rem; color:var(--accent);">${escapeHtml(room.floor)}</div>
+                    <div class="room-equip-box">
+                        <strong>Equipment:</strong> ${escapeHtml(room.equipment)}
+                    </div>
+                    <div style="display:flex; gap:0.4rem; margin-top:0.3rem;">
+                        <button class="card-action-btn" onclick="promptBookRoom('${room.id}')">Book This Room</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function promptBookRoom(roomId) {
+            const studentId = prompt(`Enter your Student ID (e.g. TP012345) to book Room ${roomId}:`);
+            if (studentId) {
+                quickSend(`book ${roomId} for ${studentId.trim().toUpperCase()}`);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // FRAME 10: LIBRARY OPERATING HOURS HANDLER
+        // ─────────────────────────────────────────────────────────────
+        function handleHoursCommand(isChinese) {
+            const now = new Date();
+            const day = now.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeDec = currentHour + currentMinute / 60;
+
+            let isOpen = false;
+            let closesAt = "";
+
+            if (day >= 1 && day <= 5) {
+                if (currentTimeDec >= 8.5 && currentTimeDec < 21.0) {
+                    isOpen = true;
+                    closesAt = "09:00 PM";
+                }
+            } else if (day === 6) {
+                if (currentTimeDec >= 9.0 && currentTimeDec < 17.0) {
+                    isOpen = true;
+                    closesAt = "05:00 PM";
+                }
+            } else if (day === 0) {
+                if (currentTimeDec >= 10.0 && currentTimeDec < 16.0) {
+                    isOpen = true;
+                    closesAt = "04:00 PM";
+                }
+            }
+
+            const statusBadge = isOpen ?
+                `<div class="live-status-pill status-open">Open Now &mdash; Closes today at ${closesAt}</div>` :
+                `<div class="live-status-pill status-closed">Currently Closed &mdash; Level 3 Silent Area is 24/7</div>`;
+
+            if (isChinese) {
+                return `
+                    ${statusBadge}<br>
+                    <strong>APU 图书馆开放时间表：</strong><br>
+                    <table class="hours-table">
+                        <tr><td><strong>周一 至 周五</strong></td><td>08:30 AM – 09:00 PM</td></tr>
+                        <tr><td><strong>周六</strong></td><td>09:00 AM – 05:00 PM</td></tr>
+                        <tr><td><strong>周日 及 公共假期</strong></td><td>10:00 AM – 04:00 PM</td></tr>
+                        <tr><td><strong>3号楼 静音自习区</strong></td><td><strong style="color:var(--accent);">24/7 全天候开放</strong>（持学生卡进出）</td></tr>
+                        <tr><td><strong>期末考试特权期</strong></td><td>主楼延长至 11:00 PM，3楼通宵开放</td></tr>
+                        <tr><td><strong>服务柜台（借还/缴费）</strong></td><td>闭馆前 30 分钟停止办理业务</td></tr>
+                    </table>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+                        提示：如需预订研讨室或自习舱，请在服务台闭柜前或直接在对话框输入 <code>预订房间</code>。
+                    </div>
+                `;
+            }
+
+            return `
+                ${statusBadge}<br>
+                <strong>APU Library Operating Hours &amp; Schedule:</strong><br>
+                <table class="hours-table">
+                    <tr><td><strong>Monday – Friday</strong></td><td>08:30 AM – 09:00 PM</td></tr>
+                    <tr><td><strong>Saturday</strong></td><td>09:00 AM – 05:00 PM</td></tr>
+                    <tr><td><strong>Sunday &amp; Public Holidays</strong></td><td>10:00 AM – 04:00 PM</td></tr>
+                    <tr><td><strong>Level 3 Silent Commons</strong></td><td><strong style="color:var(--accent);">24/7 Access</strong> (Accessible with Student Smart Card)</td></tr>
+                    <tr><td><strong>Final Examination Period</strong></td><td>Levels 1 &amp; 2 open until 11:00 PM • Level 3 24/7</td></tr>
+                    <tr><td><strong>Service Counters</strong></td><td>Closes 30 mins before library closing</td></tr>
+                </table>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+                    Need a quiet space or group room? Type <code>book room</code> to reserve a study space.
+                </div>
+            `;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // FRAME 11: OVERDUE FINES & LATE RETURN HANDLER
+        // ─────────────────────────────────────────────────────────────
+        function handleFinesCommand(text, lower, isChinese) {
+            // Check if user wants a calculation, e.g. "5 days late" or "fine for 10 days"
+            const daysMatch = text.match(/(\d+)\s*(days?|天)/i);
+            if (daysMatch) {
+                const days = parseInt(daysMatch[1]);
+                const chargeableDays = Math.max(0, days - 1); // 1-day grace period
+                const fine = Math.min(25.00, chargeableDays * 0.50).toFixed(2);
+                return `
+                    <div class="receipt-card" style="border-color: var(--warning);">
+                        <div class="receipt-title" style="color: var(--warning); border-color: rgba(251, 191, 36, 0.2);">
+                            <span>Overdue Fine Calculation</span>
+                        </div>
+                        <table class="receipt-table">
+                            <tr><td>Days Overdue:</td><td><strong>${days} days</strong></td></tr>
+                            <tr><td>Grace Period:</td><td>1 calendar day (Free)</td></tr>
+                            <tr><td>Chargeable Days:</td><td>${chargeableDays} days</td></tr>
+                            <tr><td>Standard Daily Rate:</td><td>RM 0.50 / day per book</td></tr>
+                            <tr><td>Estimated Fine:</td><td><strong style="color:var(--danger); font-size:1.05rem;">RM ${fine}</strong> (Capped at RM 25.00)</td></tr>
+                        </table>
+                        <div class="receipt-note">
+                            Fines can be paid through the APU Student Portal or at the Level 1 Service Counter.
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (isChinese) {
+                return `
+                    <strong>图书馆逾期罚款政策与滞纳金细则：</strong><br>
+                    <table class="fines-table">
+                        <tr><th>罚款项目</th><th>收费标准</th></tr>
+                        <tr><td>普通藏书（B01-B80）</td><td><strong>RM 0.50 / 天 / 本</strong></td></tr>
+                        <tr><td>红标短期预约图书（2小时借阅）</td><td><strong>RM 1.00 / 小时 / 本</strong></td></tr>
+                        <tr><td>到期宽限期</td><td>到期后享有 <strong>1 个自然日免罚宽限期</strong></td></tr>
+                        <tr><td>单本最高罚款上限</td><td>最高限额 <strong>RM 25.00</strong> / 本</td></tr>
+                        <tr><td>图书遗失 / 严重污损</td><td>图书重置购入原价 + <strong>RM 20.00</strong> 行政手续费</td></tr>
+                        <tr><td>账户冻结警告</td><td>累计未缴罚款超过 <strong>RM 10.00</strong> 暂停借阅与订房权限</td></tr>
+                        <tr><td>支持支付渠道</td><td>APU 学生线上门户、服务台 Cashier、Touch 'n Go、银行卡</td></tr>
+                    </table>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+                        提示：输入如 <code>逾期 5 天罚款多少</code> 可自动测算具体滞纳金。
+                    </div>
+                `;
+            }
+
+            return `
+                <strong>APU Library Overdue Fines &amp; Late Return Policy:</strong><br>
+                <table class="fines-table">
+                    <tr><th>Item / Rule</th><th>Policy Rate &amp; Terms</th></tr>
+                    <tr><td>General Collection (Shelves 1–8)</td><td><strong>RM 0.50</strong> per day per book</td></tr>
+                    <tr><td>Red Spot Reserve (2-Hour Loan)</td><td><strong>RM 1.00</strong> per hour per item</td></tr>
+                    <tr><td>Grace Period</td><td><strong>1 calendar day</strong> grace period after due date</td></tr>
+                    <tr><td>Maximum Fine Cap</td><td>Capped at <strong>RM 25.00</strong> per book maximum</td></tr>
+                    <tr><td>Lost / Damaged Book</td><td>Replacement cost of book + <strong>RM 20.00</strong> admin fee</td></tr>
+                    <tr><td>Privilege Suspension</td><td>Blocked if unpaid fines exceed <strong>RM 10.00</strong></td></tr>
+                    <tr><td>Payment Methods</td><td>Student Portal e-Payment, Level 1 Counter, Touch 'n Go, Cards</td></tr>
+                </table>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem;">
+                    Tip: Calculate a fine by typing e.g. <code>calculate fine for 5 days</code>.
+                </div>
+            `;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 7. SEND MESSAGE ORCHESTRATOR
+        // ─────────────────────────────────────────────────────────────
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Render user bubble
+            addMessage(escapeHtml(text), 'user');
+            input.value = '';
+            input.style.height = 'auto';
+
+            let colabUrl = document.getElementById('colabUrl').value.trim();
+            if (colabUrl) {
+                colabUrl = colabUrl.replace(/\/+$/, '');
+            }
+
+            showTyping();
+
+            // If Colab URL is configured, attempt network fetch
+            if (colabUrl) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+                    const res = await fetch(`${colabUrl}/chat`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'ngrok-skip-browser-warning': 'true',
+                            'Bypass-Tunnel-Reminder': 'true'
+                        },
+                        body: JSON.stringify({ message: text }),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        removeTyping();
+                        if (data && data.reply) {
+                            addMessage(formatReply(data.reply), 'ai', 'colab');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Colab endpoint unreachable or timed out. Falling back to local Frame engine.", e);
+                }
+            }
+
+            // Built-in Autonomous Frame Intelligence Engine
+            setTimeout(() => {
+                removeTyping();
+                const reply = processLocalAgentQuery(text);
+                addMessage(formatReply(reply), 'ai', 'local');
+            }, 300);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 8. KEYBOARD SHORTCUTS & AUTO-GROW
+        // ─────────────────────────────────────────────────────────────
+        document.getElementById('userInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        document.getElementById('userInput').addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        // 9. ON LOAD INITIALIZATION
+        // ─────────────────────────────────────────────────────────────
+        window.addEventListener('load', () => {
+            getStoredCatalogue(); // ensure catalogue is initialized
+
+            setTimeout(() => {
+                addMessage(`
+                    <strong>Welcome to the Library AI Chatbot.</strong><br><br>
+                    I am trained on the complete <strong>Frame Knowledge Base</strong> with verified records for all <strong>80 catalogue books</strong> across 8 shelves (Fiction, Comics, Encyclopedias, Economics, Science, Literature, Philosophy, and AI).<br><br>
+                    You can ask me to:
+                    <ul style="margin-left: 1.2rem; margin-top: 0.4rem; font-size: 0.88rem;">
+                        <li><strong>Book Study Rooms:</strong> Reserve discussion rooms &amp; silent pods (R01–R06)</li>
+                        <li><strong>Library Hours:</strong> Check live open status and weekly schedule</li>
+                        <li><strong>Overdue Fines:</strong> Check rates, caps, grace periods, or calculate late fees</li>
+                        <li><strong>Search Books:</strong> Find by title, author, keyword, or ID (e.g. <code>B01</code>, <code>Deep Learning</code>)</li>
+                        <li><strong>Shelf Locations:</strong> Exact Shelf (1–8) and Row (1 &amp; 2) map</li>
+                        <li><strong>Browse Categories:</strong> 8 categories across Shelves 1 to 8</li>
+                        <li><strong>Simulate Borrowing:</strong> Up to 5 books for 1 calendar month</li>
+                        <li><strong>Return Books:</strong> Real-time inventory restoration &amp; late fee check</li>
+                        <li><strong>Borrowing History:</strong> Track loan transactions and overdue alerts</li>
+                    </ul>
+                    <br>
+                    <em>Click any suggestion chip below or type your request.</em>
+                `, 'ai');
+            }, 350);
+        });
+    </script>
+</body>
+
+</html>
