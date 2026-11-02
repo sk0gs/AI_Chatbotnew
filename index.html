@@ -777,6 +777,16 @@
                  └── NO  → TRIGGER FALLBACK & OFFER LIBRARY FORM → END
         ═══════════════════════════════════════════════════════════ */
         function intentDecision(text, lower) {
+            /* Room & Study Space intent signals (checked early to capture "book R01", "rooms", etc.) */
+            if (
+                lower.match(/\b(r0[1-6])\b/i) ||
+                lower.includes('room') || lower.includes('pod') ||
+                lower.includes('media lab') || lower.includes('study space') ||
+                lower.includes('discussion') || lower.includes('booking') ||
+                lower.includes('reserve') || lower.includes('cancel room') ||
+                lower.includes('自习室') || lower.includes('研讨室') || lower.includes('订房') || lower.includes('预约')
+            ) return 'FAQ_RULES';
+
             /* Borrow, Return, History intent signals */
             if (
                 lower.includes('history') || lower.includes('record') ||
@@ -807,9 +817,7 @@
                 lower.includes('schedule') || lower.includes('fine') || lower.includes('overdue') ||
                 lower.includes('late') || lower.includes('penalty') || lower.includes('rule') ||
                 lower.includes('policy') || lower.includes('policies') || lower.includes('limit') ||
-                lower.includes('due date') || lower.includes('room') || lower.includes('pod') ||
-                lower.includes('media lab') || lower.includes('study space') || lower.includes('book room') ||
-                lower.includes('reserve') || lower.includes('cancel')
+                lower.includes('due date') || lower.includes('cancel')
             ) return 'FAQ_RULES';
 
             return null; // fallback
@@ -881,22 +889,33 @@
 
         /* ── FAQ/Rules Branch: retrieve library policy ── */
         function handleFAQ(text, lower) {
-            // Hours
-            if (lower.includes('hour') || lower.includes('open') || lower.includes('close') || lower.includes('schedule')) {
-                return { ok: true, html: fmtHours() };
-            }
-            // Fines
-            if (lower.includes('fine') || lower.includes('overdue') || lower.includes('late fee') || lower.includes('penalty')) {
-                return { ok: true, html: fmtFines(text) };
-            }
-            // Rooms
-            if (lower.includes('room') || lower.includes('pod') || lower.includes('media lab') || lower.includes('study space') || lower.includes('book room') || lower.includes('reserve') || lower.includes('cancel')) {
+            // 1. Rooms & Study Pods
+            if (
+                lower.match(/\b(r0[1-6])\b/i) ||
+                lower.includes('room') || lower.includes('pod') ||
+                lower.includes('media lab') || lower.includes('study space') ||
+                lower.includes('discussion') || lower.includes('booking') ||
+                lower.includes('reserve') || lower.includes('cancel') ||
+                lower.includes('自习室') || lower.includes('研讨室') || lower.includes('订房') || lower.includes('预约')
+            ) {
                 return { ok: true, html: handleRooms(text, lower) };
             }
-            // Policies
-            if (lower.includes('policy') || lower.includes('policies') || lower.includes('rule') || lower.includes('limit') || lower.includes('due date') || lower.includes('borrow limit')) {
+
+            // 2. Hours & Opening Times
+            if (lower.includes('hour') || lower.includes('open') || lower.includes('close') || lower.includes('schedule') || lower.includes('开放时间') || lower.includes('营业时间')) {
+                return { ok: true, html: fmtHours() };
+            }
+
+            // 3. Fines & Penalties
+            if (lower.includes('fine') || lower.includes('overdue') || lower.includes('late fee') || lower.includes('penalty') || lower.includes('罚款') || lower.includes('滞纳金')) {
+                return { ok: true, html: fmtFines(text) };
+            }
+
+            // 4. Library Policies
+            if (lower.includes('policy') || lower.includes('policies') || lower.includes('rule') || lower.includes('limit') || lower.includes('due date') || lower.includes('borrow limit') || lower.includes('规则') || lower.includes('政策')) {
                 return { ok: true, html: fmtPolicies() };
             }
+
             return { ok: false, html: '' };
         }
 
@@ -1101,6 +1120,11 @@
             // Guard: in case "borrow history" or "borrowing records" reached here
             if (lower.includes('history') || lower.includes('record') || lower.includes('历史') || lower.includes('记录')) {
                 return handleHistory(text, lower);
+            }
+
+            // Guard: in case a room booking command reached here (e.g. "borrow R01", "book R01")
+            if (lower.match(/\b(r0[1-6])\b/i) || lower.includes('room') || lower.includes('pod')) {
+                return handleRooms(text, lower);
             }
 
             let book = null;
@@ -1354,82 +1378,185 @@
         function handleRooms(text, lower) {
             const bookings = getRooms();
 
-            // Cancel
+            // 1. Cancellation
             if (lower.includes('cancel')) {
-                const bk = text.match(/\b(BK-\d{8}-\d{4})\b/i);
-                if (bk) {
-                    const id = bk[1].toUpperCase();
-                    const idx = bookings.findIndex(b => b.booking_id === id);
-                    if (idx !== -1) { const r = bookings.splice(idx, 1)[0]; saveRooms(bookings); return `Booking <code>${id}</code> for ${r.room_name} has been cancelled.`; }
-                    return `Booking reference <code>${id}</code> not found.`;
+                const bkMatch = text.match(/\b(BK-?\d{8}-?\d{4})\b/i);
+                if (bkMatch) {
+                    const id = bkMatch[1].toUpperCase();
+                    const idx = bookings.findIndex(b => b.booking_id.toUpperCase() === id);
+                    if (idx !== -1) {
+                        const removed = bookings.splice(idx, 1)[0];
+                        saveRooms(bookings);
+                        return `<div class="receipt" style="border-color:var(--danger)">
+                            <div class="receipt-head" style="color:var(--danger)">✓ Room Reservation Cancelled</div>
+                            Reservation <code>${id}</code> for <strong>${removed.room_name}</strong> (${removed.room_id}) has been cancelled. The slot has been released for other students.
+                        </div>`;
+                    }
+                    return `<strong>Cancellation Failed:</strong> Booking reference <code>${id}</code> was not found. Please double-check your code.`;
                 }
-                return `To cancel, type: <code>cancel room BK-XXXXXXXX-XXXX</code>`;
+                return `<strong>Cancel Room Reservation:</strong> Please provide your booking reference code.<br>
+                <div class="notice">Example: <code>cancel room BK-20261102-1234</code></div>`;
             }
 
-            // View my bookings
-            if (lower.includes('my room') || lower.includes('my bookings') || lower.includes('view booking') || lower.includes('check room')) {
-                const sm = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
-                let sid = sm ? sm[0].toUpperCase() : (bookings.length > 0 ? bookings[bookings.length - 1].student_id : null);
-                if (!sid) sid = prompt('Enter your Student ID to view your room bookings:');
-                if (!sid) return 'Student ID required to view room bookings.';
-                const mine = bookings.filter(b => b.student_id.toUpperCase() === sid.toUpperCase());
-                if (mine.length === 0) return `No active room reservations for <strong>${sid}</strong>.`;
-                let html = `<strong>Active Reservations for ${sid}:</strong>`;
+            // 2. View my bookings / check existing bookings
+            const wantsToViewBookings = (
+                lower.includes('my room') || lower.includes('my booking') ||
+                lower.includes('my reservation') || lower.includes('view booking') ||
+                lower.includes('check booking') || lower.includes('check room') ||
+                lower.includes('show booking') || lower.includes('list booking') ||
+                lower.includes('room booking') || lower.includes('room reservations') ||
+                lower === 'room bookings' || lower === 'bookings'
+            );
+
+            if (wantsToViewBookings && !lower.includes('book r0') && !lower.includes('reserve r0')) {
+                const sm = text.match(/\b(TP\d{4,8}|\d{5,8}|S\d{6,8})\b/i);
+                let sid = sm ? sm[0].toUpperCase() : null;
+
+                if (!sid) {
+                    sid = localStorage.getItem('last_student_id');
+                }
+                if (!sid && bookings.length > 0) {
+                    const uniqueStudents = [...new Set(bookings.map(b => b.student_id))];
+                    if (uniqueStudents.length === 1) sid = uniqueStudents[0];
+                }
+                if (!sid) {
+                    sid = prompt('Enter your Student ID (e.g. TP012345) to view your room reservations:');
+                }
+                if (!sid) {
+                    if (bookings.length === 0) {
+                        return `<strong>Room Reservations:</strong> No active room reservations in the system.<br>
+                        <div class="notice">To book a study room, type: <code>book R01 for TP012345</code></div>` + renderRoomTable();
+                    }
+                    const recordedStudents = [...new Set(bookings.map(b => b.student_id))].join(', ');
+                    return `Please provide your <strong>Student ID</strong> to view your room reservations.<br>
+                    <div class="notice">Example: <code>my room bookings TP012345</code> (Active bookings for: ${recordedStudents})</div>`;
+                }
+                sid = sid.trim().toUpperCase();
+                localStorage.setItem('last_student_id', sid);
+
+                const mine = bookings.filter(b => b.student_id.toUpperCase() === sid);
+                if (mine.length === 0) {
+                    return `<strong>Active Reservations for ${sid}:</strong><br>No active room reservations found for Student ID <strong>${sid}</strong>.<br>
+                    <div class="notice">You can book any study room below using: <code>book R01 for ${sid}</code></div>` + renderRoomTable();
+                }
+
+                let html = `<strong>Active Room Reservations for Student <code>${sid}</code> (${mine.length}):</strong>`;
                 mine.forEach(b => {
                     html += `<div class="receipt" style="margin-top:.4rem;border-color:rgba(99,102,241,.3)">
-                <div class="receipt-head" style="color:#818cf8">Ref: <code>${b.booking_id}</code></div>
-                <table>
-                    <tr><td>Room:</td><td><strong>${b.room_name}</strong> (${b.room_id})</td></tr>
-                    <tr><td>Date & Slot:</td><td>${b.date} · ${b.slot}</td></tr>
-                    <tr><td>Door PIN:</td><td><strong style="color:var(--accent);font-size:1.1rem;letter-spacing:2px">${b.pin}</strong></td></tr>
-                </table>
-                <div class="receipt-note">To cancel: <code>cancel room ${b.booking_id}</code></div>
-            </div>`;
+                        <div class="receipt-head" style="color:#818cf8">Booking Ref: <code>${b.booking_id}</code></div>
+                        <table>
+                            <tr><td>Room:</td><td><strong>${b.room_name}</strong> (<code>${b.room_id}</code>)</td></tr>
+                            <tr><td>Date &amp; Slot:</td><td>${b.date} · <strong>${b.slot}</strong></td></tr>
+                            <tr><td>Smart Door PIN:</td><td><strong style="color:var(--accent);font-size:1.15rem;letter-spacing:2px">${b.pin}</strong></td></tr>
+                        </table>
+                        <div class="receipt-note">To cancel this reservation, type: <code>cancel room ${b.booking_id}</code></div>
+                    </div>`;
                 });
                 return html;
             }
 
-            // Direct booking
+            // 3. Direct booking command (e.g. "book R01 for TP012345", "reserve R02", "book R01")
+            let room = null;
             const rm = text.match(/\b(R0[1-6])\b/i);
             if (rm) {
                 const rid = rm[1].toUpperCase();
-                const room = DEFAULT_ROOMS.find(r => r.id === rid);
-                if (!room) return `Room ${rid} not found. Choose R01–R06.`;
-                const sm = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
-                let sid = sm ? sm[0].toUpperCase() : null;
-                if (!sid) sid = prompt(`Enter your Student ID to reserve ${room.name}:`);
-                if (!sid) return 'Student ID required for room reservation.';
-                const today = new Date();
-                const slot = '02:00 PM – 04:00 PM';
-                const pin = Math.floor(1000 + Math.random() * 9000);
-                const bid = 'BK-' + today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0') + '-' + Math.floor(1000 + Math.random() * 9000);
-                bookings.push({ booking_id: bid, room_id: room.id, room_name: room.name, student_id: sid, date: fmtDate(today), slot, pin });
-                saveRooms(bookings);
-                return `<div class="receipt">
-                <div class="receipt-head">✓ Room Reservation Confirmed</div>
-                <table>
-                    <tr><td>Booking Ref:</td><td><code>${bid}</code></td></tr>
-                    <tr><td>Student ID:</td><td>${sid}</td></tr>
-                    <tr><td>Room:</td><td><strong>${room.name}</strong> (${room.id})</td></tr>
-                    <tr><td>Location:</td><td>${room.floor}</td></tr>
-                    <tr><td>Capacity:</td><td>${room.capacity}</td></tr>
-                    <tr><td>Date:</td><td>${fmtDate(today)}</td></tr>
-                    <tr><td>Slot:</td><td>${slot}</td></tr>
-                    <tr><td>Door PIN:</td><td><strong style="color:var(--accent);font-size:1.15rem;letter-spacing:2px">${pin}</strong></td></tr>
-                </table>
-                <div class="receipt-note">Check in within 15 minutes of session start or room will be auto-released.</div>
-            </div>`;
+                room = DEFAULT_ROOMS.find(r => r.id === rid);
+            }
+            if (!room) {
+                // Check by room name match
+                room = DEFAULT_ROOMS.find(r => lower.includes(r.name.toLowerCase()));
             }
 
-            // Default: show all rooms with instructions
-            let html = `<strong>APU Library Study & Discussion Rooms (6 Available):</strong><br>
+            if (room && (lower.includes('book') || lower.includes('reserve') || lower.includes('order') || lower.includes('订') || lower.includes('约') || text.trim().toUpperCase() === room.id)) {
+                const sm = text.match(/\b(TP\d{4,8}|\d{5,8}|S\d{6,8})\b/i);
+                let sid = sm ? sm[0].toUpperCase() : null;
+
+                if (!sid) {
+                    sid = localStorage.getItem('last_student_id');
+                }
+                if (!sid) {
+                    sid = prompt(`Enter your Student ID (e.g. TP012345) to book ${room.name} (${room.id}):`);
+                }
+                if (!sid) {
+                    return `<strong>Student ID Required:</strong> Please provide your Student ID to reserve <strong>${room.name}</strong> (${room.id}).<br>
+                    <div class="notice">Command format: <code>book ${room.id} for TP012345</code></div>`;
+                }
+                sid = sid.trim().toUpperCase();
+                localStorage.setItem('last_student_id', sid);
+
+                const today = new Date();
+                const todayStr = fmtDate(today);
+
+                // Check daily limit (max 2 active room bookings per student per day)
+                const studentDayBookings = bookings.filter(b => b.student_id.toUpperCase() === sid && b.date === todayStr);
+                if (studentDayBookings.length >= 2) {
+                    return `<strong>Daily Booking Limit Reached:</strong> Student <strong>${sid}</strong> already has ${studentDayBookings.length} active room bookings today.<br>
+                    Under APU Library Policy, each student is allowed up to 2 hours of room reservations daily.<br>
+                    <div class="notice">To cancel an existing booking, type: <code>cancel room ${studentDayBookings[0].booking_id}</code></div>`;
+                }
+
+                // Default slot: 2-hour window
+                const currentHour = today.getHours();
+                let defaultSlot = "02:00 PM – 04:00 PM";
+                if (currentHour >= 16) {
+                    defaultSlot = "06:00 PM – 08:00 PM";
+                } else if (currentHour >= 14) {
+                    defaultSlot = "04:00 PM – 06:00 PM";
+                } else if (currentHour >= 11) {
+                    defaultSlot = "12:00 PM – 02:00 PM";
+                } else if (currentHour >= 9) {
+                    defaultSlot = "10:00 AM – 12:00 PM";
+                }
+
+                const pin = Math.floor(1000 + Math.random() * 9000);
+                const bid = 'BK-' + today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0') + '-' + Math.floor(1000 + Math.random() * 9000);
+
+                const newBooking = {
+                    booking_id: bid,
+                    room_id: room.id,
+                    room_name: room.name,
+                    student_id: sid,
+                    date: todayStr,
+                    slot: defaultSlot,
+                    pin: pin
+                };
+                bookings.push(newBooking);
+                saveRooms(bookings);
+
+                return `<div class="receipt">
+                    <div class="receipt-head">✓ Study Room Reservation Confirmed</div>
+                    <table>
+                        <tr><td>Booking Ref:</td><td><code>${bid}</code></td></tr>
+                        <tr><td>Student ID:</td><td><strong>${sid}</strong></td></tr>
+                        <tr><td>Room:</td><td><strong>${room.name}</strong> (<code>${room.id}</code>)</td></tr>
+                        <tr><td>Type &amp; Capacity:</td><td>${room.type} · ${room.capacity}</td></tr>
+                        <tr><td>Location:</td><td>${room.floor}</td></tr>
+                        <tr><td>Equipment:</td><td><small style="color:var(--muted)">${room.equipment}</small></td></tr>
+                        <tr><td>Date:</td><td>${todayStr}</td></tr>
+                        <tr><td>Reserved Slot:</td><td><strong>${defaultSlot}</strong></td></tr>
+                        <tr><td>Smart Door PIN:</td><td><strong style="color:var(--accent);font-size:1.2rem;letter-spacing:3px">${pin}</strong></td></tr>
+                    </table>
+                    <div class="receipt-note">
+                        <strong>Check-in Policy:</strong> Enter your 4-digit Door PIN on the room keypad. Please check in within 15 minutes or the room will be auto-released.<br>
+                        To view all bookings: <code>my room bookings</code> · To cancel: <code>cancel room ${bid}</code>
+                    </div>
+                </div>`;
+            }
+
+            // 4. Default: show active student booking summary + all 6 available rooms
+            return renderRoomTable();
+        }
+
+        function renderRoomTable() {
+            let html = `<strong>APU Library Study &amp; Discussion Rooms (6 Available):</strong><br>
             <div class="notice" style="margin-bottom:.5rem">
-                To reserve a room, type: <code>book R01 for TP012345</code><br>
-                To view your bookings: <code>my room bookings TP012345</code><br>
-                To cancel: <code>cancel room BK-XXXXXXXX-XXXX</code>
+                <strong>Room Booking Commands:</strong><br>
+                • <strong>Reserve a room:</strong> <code>book R01 for TP012345</code> (or <code>book R02</code>)<br>
+                • <strong>View reservations:</strong> <code>my room bookings</code> or <code>my room bookings TP012345</code><br>
+                • <strong>Cancel reservation:</strong> <code>cancel room BK-XXXXXXXX-XXXX</code>
             </div>
             <table class="data-table">
-                <thead><tr><th>ID</th><th>Room</th><th>Capacity</th><th>Location</th><th>Equipment</th></tr></thead>
+                <thead><tr><th>ID</th><th>Room Name</th><th>Capacity</th><th>Location</th><th>Equipment</th></tr></thead>
                 <tbody>`;
             DEFAULT_ROOMS.forEach(r => {
                 html += `<tr>
