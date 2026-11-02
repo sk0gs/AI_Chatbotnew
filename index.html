@@ -737,12 +737,30 @@
         ];
 
         /* ── Persistence ── */
-        function getCat() { const r = localStorage.getItem('lib_cat'); return r ? JSON.parse(r) : JSON.parse(JSON.stringify(DEFAULT_CATALOGUE)); }
-        function saveCat(c) { localStorage.setItem('lib_cat', JSON.stringify(c)); }
-        function getRecs() { const r = localStorage.getItem('lib_recs'); return r ? JSON.parse(r) : []; }
-        function saveRecs(r) { localStorage.setItem('lib_recs', JSON.stringify(r)); }
-        function getRooms() { const r = localStorage.getItem('lib_rooms'); return r ? JSON.parse(r) : []; }
-        function saveRooms(r) { localStorage.setItem('lib_rooms', JSON.stringify(r)); }
+        function getCat() {
+            const r = localStorage.getItem('lib_cat') || localStorage.getItem('library_catalogue_data');
+            return r ? JSON.parse(r) : JSON.parse(JSON.stringify(DEFAULT_CATALOGUE));
+        }
+        function saveCat(c) {
+            localStorage.setItem('lib_cat', JSON.stringify(c));
+            localStorage.setItem('library_catalogue_data', JSON.stringify(c));
+        }
+        function getRecs() {
+            const r = localStorage.getItem('lib_recs') || localStorage.getItem('library_borrow_records');
+            return r ? JSON.parse(r) : [];
+        }
+        function saveRecs(r) {
+            localStorage.setItem('lib_recs', JSON.stringify(r));
+            localStorage.setItem('library_borrow_records', JSON.stringify(r));
+        }
+        function getRooms() {
+            const r = localStorage.getItem('lib_rooms') || localStorage.getItem('library_room_bookings');
+            return r ? JSON.parse(r) : [];
+        }
+        function saveRooms(r) {
+            localStorage.setItem('lib_rooms', JSON.stringify(r));
+            localStorage.setItem('library_room_bookings', JSON.stringify(r));
+        }
 
         /* ── Date helpers ── */
         function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
@@ -759,15 +777,22 @@
                  └── NO  → TRIGGER FALLBACK & OFFER LIBRARY FORM → END
         ═══════════════════════════════════════════════════════════ */
         function intentDecision(text, lower) {
-            /* Book-search intent signals */
+            /* Borrow, Return, History intent signals */
+            if (
+                lower.includes('history') || lower.includes('record') ||
+                lower.includes('borrow') || lower.includes('return') ||
+                lower.includes('借') || lower.includes('还') || lower.includes('历史') || lower.includes('记录')
+            ) return 'BOOK_SEARCH';
+
+            /* Book-search / location / categories intent signals */
             if (
                 lower.match(/\bb0?([1-9]|[1-7][0-9]|80)\b/i) ||
                 lower.includes('search') || lower.includes('find') ||
                 lower.includes('look for') || lower.includes('do you have') ||
-                lower.includes('show me') || lower.includes('borrow') ||
-                lower.includes('return') || lower.includes('history') ||
+                lower.includes('show me') ||
                 lower.includes('where is') || lower.includes('location') ||
                 lower.includes('shelf') || lower.includes('categories') ||
+                lower.includes('category') ||
                 lower.includes('fiction') || lower.includes('comics') ||
                 lower.includes('encyclopedia') || lower.includes('economics') ||
                 lower.includes('science') || lower.includes('literature') ||
@@ -792,42 +817,49 @@
 
         /* ── Book-Search Branch: query catalogue by title / author / subject ── */
         function handleBookSearch(text, lower, catalogue) {
-            // Direct Book ID
-            const idM = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
-            if (idM) {
-                const bid = 'B' + String(idM[1]).padStart(2, '0');
-                const b = catalogue.find(x => x.id.toUpperCase() === bid.toUpperCase());
-                if (b) return { ok: true, html: `<div>Found exact record for <strong>${b.id}</strong>:<div class="book-grid">${bookCard(b)}</div></div>` };
-            }
-
-            // Borrow command
-            if (lower.startsWith('borrow') || lower.includes('i want to borrow') || lower.includes('can i borrow')) {
-                return { ok: true, html: handleBorrow(text, lower, catalogue) };
-            }
-            // Return command
-            if (lower.startsWith('return') || lower.includes('i want to return') || lower.includes('how to return')) {
-                return { ok: true, html: handleReturn(text, lower, catalogue) };
-            }
-            // History
-            if (lower.includes('history') || lower.includes('my records') || lower.includes('borrowed books')) {
+            // 1. History command (check FIRST so "borrow history" or "history B01" goes to history)
+            if (lower.includes('history') || lower.includes('my records') || lower.includes('borrowed books') || lower.includes('borrow history') || lower.includes('borrowing history') || lower.includes('借阅历史') || lower.includes('借书记录')) {
                 return { ok: true, html: handleHistory(text, lower) };
             }
-            // Location
-            if (lower.includes('where is') || lower.includes('location') || lower.includes('where can i find')) {
+
+            // 2. Borrow command
+            if (lower.startsWith('borrow') || lower.includes('i want to borrow') || lower.includes('can i borrow') || lower.includes('borrow book') || lower.includes('借书') || lower.includes('想借')) {
+                return { ok: true, html: handleBorrow(text, lower, catalogue) };
+            }
+
+            // 3. Return command
+            if (lower.startsWith('return') || lower.includes('i want to return') || lower.includes('how to return') || lower.includes('return book') || lower.includes('还书') || lower.includes('归还')) {
+                return { ok: true, html: handleReturn(text, lower, catalogue) };
+            }
+
+            // 4. Location inquiry
+            if (lower.includes('where is') || lower.includes('location') || lower.includes('where can i find') || lower.includes('shelf for') || lower.includes('在哪') || lower.includes('位置')) {
                 return { ok: true, html: handleLocation(lower, catalogue) };
             }
-            // Categories browse
-            if (lower === 'categories' || lower.includes('browse') || lower.includes('shelves') || lower.includes('all categories')) {
+
+            // 5. Categories browse
+            if (lower === 'categories' || lower === 'category' || lower.includes('browse') || lower.includes('shelves') || lower.includes('all categories') || lower.includes('list categories') || lower.includes('分类')) {
                 return { ok: true, html: fmtCategories() };
             }
-            // Category-specific listing
+
+            // 6. Category-specific listing
             const cat = CATEGORIES.find(c =>
                 lower.includes(c.name.toLowerCase()) ||
                 (c.name === 'Artificial Intelligence' && (lower.includes('ai') || lower.includes('artificial intelligence')))
             );
-            if (cat) return { ok: true, html: fmtCatBooks(cat, catalogue) };
+            if (cat && (lower.includes('book') || lower.includes('shelf') || lower.includes('show') || lower.length <= cat.name.length + 5)) {
+                return { ok: true, html: fmtCatBooks(cat, catalogue) };
+            }
 
-            // Full-text search
+            // 7. Direct Book ID lookup (only if query is specifically asking for just that Book ID)
+            const idOnly = text.match(/^\s*(?:book\s+|check\s+|view\s+)?(B0?([1-9]|[1-7][0-9]|80))\s*$/i);
+            if (idOnly) {
+                const bid = 'B' + String(idOnly[2]).padStart(2, '0');
+                const b = catalogue.find(x => x.id.toUpperCase() === bid.toUpperCase());
+                if (b) return { ok: true, html: `<div>Found exact record for <strong>${b.id}</strong>:<div class="book-grid">${bookCard(b)}</div></div>` };
+            }
+
+            // 8. Full-text search
             const q = lower
                 .replace(/^(search for|search|find|look for|do you have|can you find|is there|show me|tell me about)\s+/i, '')
                 .replace(/[?!.,]/g, '').trim();
@@ -929,15 +961,16 @@
             ${welcomeMessage()}
             <div class="notice">
                 <strong>How to use this chatbot:</strong><br>
-                • <strong>Search books</strong> — type a title, author, Book ID (e.g. <code>B01</code>), or topic (e.g. <code>fiction</code>, <code>AI</code>)<br>
-                • <strong>Borrow a book</strong> — type <code>borrow B01 for TP012345</code><br>
-                • <strong>Return a book</strong> — type <code>return B01 for TP012345</code><br>
-                • <strong>Book history</strong> — type <code>history TP012345</code><br>
-                • <strong>Study rooms</strong> — type <code>rooms</code> to view or <code>book R01 for TP012345</code> to reserve<br>
-                • <strong>Library hours</strong> — type <code>hours</code><br>
-                • <strong>Overdue fines</strong> — type <code>fines</code> or <code>fine 5 days</code><br>
-                • <strong>Policies</strong> — type <code>policies</code><br>
-                • <strong>Browse categories</strong> — type <code>categories</code>
+                • <strong>Borrow a book:</strong> <code>borrow B01 for TP012345</code> or <code>borrow Harry Potter for TP012345</code><br>
+                • <strong>Return a book:</strong> <code>return B01 for TP012345</code> or <code>return B01</code><br>
+                • <strong>Borrowing history:</strong> <code>history TP012345</code> or <code>borrow history</code><br>
+                • <strong>Search catalogue:</strong> <code>search AI</code>, <code>find Tolkien</code>, or Book ID <code>B01</code><br>
+                • <strong>Book location:</strong> <code>where is B01</code> or <code>location of 1984</code><br>
+                • <strong>Study rooms:</strong> <code>rooms</code> or <code>book R01 for TP012345</code><br>
+                • <strong>Library hours:</strong> <code>hours</code><br>
+                • <strong>Overdue fines:</strong> <code>fines</code> or <code>fine 5 days</code><br>
+                • <strong>Library policies:</strong> <code>policies</code><br>
+                • <strong>Browse categories:</strong> <code>categories</code>
             </div>
         `;
         }
@@ -1065,129 +1098,256 @@
         }
 
         function handleBorrow(text, lower, catalogue) {
+            // Guard: in case "borrow history" or "borrowing records" reached here
+            if (lower.includes('history') || lower.includes('record') || lower.includes('历史') || lower.includes('记录')) {
+                return handleHistory(text, lower);
+            }
+
             let book = null;
             const im = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
-            if (im) book = catalogue.find(b => b.id.toUpperCase() === ('B' + String(im[1]).padStart(2, '0')).toUpperCase());
-            if (!book) book = catalogue.find(b => lower.includes(b.title.toLowerCase()));
-            if (!book) return `<strong>Book Borrowing:</strong><br>Please provide the Book ID (e.g. <code>B01</code>) or exact title and your Student ID.<br>
-            <div class="notice">Example: <code>borrow B01 for TP012345</code></div>`;
-            if (book.available_copies <= 0) return `<strong>Cannot Borrow:</strong> "${book.title}" (${book.id}) has 0 available copies.`;
+            if (im) {
+                const bid = 'B' + String(im[1]).padStart(2, '0');
+                book = catalogue.find(b => b.id.toUpperCase() === bid.toUpperCase());
+            }
+            if (!book) {
+                // Match by exact title match in text
+                book = catalogue.find(b => lower.includes(b.title.toLowerCase()));
+            }
+            if (!book) {
+                // Match by keyword in query
+                const cleaned = lower.replace(/borrow|book|for|please|i want to|can i|\b(tp\d+|\d{5,8}|s\d+)\b/gi, '').trim();
+                if (cleaned.length >= 3) {
+                    book = catalogue.find(b => b.title.toLowerCase().includes(cleaned) || b.keywords.toLowerCase().includes(cleaned));
+                }
+            }
+            if (!book) {
+                return `<strong>Book Borrowing Service:</strong><br>Please provide a valid <strong>Book ID</strong> (e.g. <code>B01</code>) or Book Title along with your <strong>Student ID</strong>.<br>
+                <div class="notice">
+                    <strong>Examples:</strong><br>
+                    • <code>borrow B01 for TP012345</code><br>
+                    • <code>borrow Harry Potter for TP012345</code>
+                </div>`;
+            }
 
-            const sm = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
-            const sid = sm ? sm[0].toUpperCase() : prompt('Enter your Student ID (e.g. TP012345):');
-            if (!sid) return 'Borrowing paused: Student ID required.';
+            if (book.available_copies <= 0) {
+                return `<strong>Cannot Borrow:</strong> "<em>${book.title}</em>" (${book.id}) currently has <strong>0 available copies</strong> (Out of Stock / All copies on loan).`;
+            }
+
+            // Extract student ID
+            const sm = text.match(/\b(TP\d{4,8}|\d{5,8}|S\d{6,8})\b/i);
+            let sid = sm ? sm[0].toUpperCase() : null;
+            if (!sid) {
+                sid = localStorage.getItem('last_student_id');
+            }
+            if (!sid) {
+                sid = prompt(`Enter your Student ID (e.g. TP012345) to borrow "${book.title}":`);
+            }
+            if (!sid) {
+                return `<strong>Student ID Required:</strong> Please provide your Student ID to confirm borrowing.<br>
+                <div class="notice">Type: <code>borrow ${book.id} for TP012345</code></div>`;
+            }
+            sid = sid.trim().toUpperCase();
+            localStorage.setItem('last_student_id', sid);
 
             const recs = getRecs();
-            if (recs.filter(r => r.student_id.toUpperCase() === sid.toUpperCase() && r.borrowing_status === 'Borrowed').length >= 5)
-                return `<strong>Borrowing Limit Reached:</strong> ${sid} already has 5 active borrowed books. Please return a book first.`;
+            const activeBorrows = recs.filter(r => r.student_id.toUpperCase() === sid && r.borrowing_status === 'Borrowed');
+            if (activeBorrows.length >= 5) {
+                return `<strong>Borrowing Limit Reached:</strong> Student <strong>${sid}</strong> already has <strong>${activeBorrows.length}</strong> active borrowed books.<br>
+                Under Library Policy, the maximum limit is 5 books per student at one time. Please return a book before borrowing another.`;
+            }
+
+            // Check if student already has this exact book borrowed
+            const alreadyHasBook = activeBorrows.find(r => r.book_id.toUpperCase() === book.id.toUpperCase());
+            if (alreadyHasBook) {
+                return `<strong>Already Borrowed:</strong> Student <strong>${sid}</strong> already currently has "<em>${book.title}</em>" (${book.id}) on loan (Due: ${alreadyHasBook.due_date}).`;
+            }
 
             const today = new Date();
             const bDate = fmtDate(today);
             const dDate = fmtDate(monthDue(today));
             const bId = 'BRW-' + today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0') + '-' + Math.floor(1000 + Math.random() * 9000);
+
             book.available_copies--;
             saveCat(catalogue);
-            recs.push({ borrow_id: bId, student_id: sid, book_id: book.id, book_title: book.title, borrow_date: bDate, due_date: dDate, return_date: '', borrowing_status: 'Borrowed' });
+
+            recs.push({
+                borrow_id: bId,
+                student_id: sid,
+                book_id: book.id,
+                book_title: book.title,
+                borrow_date: bDate,
+                due_date: dDate,
+                return_date: '',
+                borrowing_status: 'Borrowed'
+            });
             saveRecs(recs);
 
             return `<div class="receipt">
-            <div class="receipt-head">✓ Borrowing Confirmed</div>
-            <table>
-                <tr><td>Borrow ID:</td><td><code>${bId}</code></td></tr>
-                <tr><td>Student ID:</td><td>${sid}</td></tr>
-                <tr><td>Book:</td><td>${book.title} (${book.id})</td></tr>
-                <tr><td>Location:</td><td>Shelf ${book.shelf}, Row ${book.row}</td></tr>
-                <tr><td>Borrow Date:</td><td>${bDate}</td></tr>
-                <tr><td>Due Date:</td><td>${dDate} <em>(1 calendar month)</em></td></tr>
-                <tr><td>Status:</td><td><span class="badge badge-borrowed">Borrowed</span></td></tr>
-                <tr><td>Remaining Copies:</td><td>${book.available_copies} / ${book.total_copies}</td></tr>
-            </table>
-            <div class="receipt-note">Simulated transaction for assignment demonstration.</div>
-        </div>`;
+                <div class="receipt-head">✓ Borrowing Transaction Confirmed</div>
+                <table>
+                    <tr><td>Borrow ID:</td><td><code>${bId}</code></td></tr>
+                    <tr><td>Student ID:</td><td><strong>${sid}</strong></td></tr>
+                    <tr><td>Book:</td><td><strong>${book.title}</strong> (<code>${book.id}</code>)</td></tr>
+                    <tr><td>Location:</td><td>Shelf ${book.shelf}, Row ${book.row} · ${book.category}</td></tr>
+                    <tr><td>Borrow Date:</td><td>${bDate} <em>(Current date)</em></td></tr>
+                    <tr><td>Due Date:</td><td><strong>${dDate}</strong> <em>(1 calendar month)</em></td></tr>
+                    <tr><td>Status:</td><td><span class="badge badge-borrowed">Borrowed</span></td></tr>
+                    <tr><td>Remaining Stock:</td><td>${book.available_copies} / ${book.total_copies} available</td></tr>
+                </table>
+                <div class="receipt-note">
+                    Simulated transaction recorded. Type <code>history ${sid}</code> to view your records, or <code>return ${book.id} for ${sid}</code> to return.
+                </div>
+            </div>`;
         }
 
         function handleReturn(text, lower, catalogue) {
             const recs = getRecs();
             const active = recs.filter(r => r.borrowing_status === 'Borrowed');
-            const sm = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+
+            const sm = text.match(/\b(TP\d{4,8}|\d{5,8}|S\d{6,8})\b/i);
             let sid = sm ? sm[0].toUpperCase() : null;
+
+            if (!sid) {
+                sid = localStorage.getItem('last_student_id');
+            }
             if (!sid && active.length > 0) {
                 const u = [...new Set(active.map(r => r.student_id))];
                 if (u.length === 1) sid = u[0];
             }
-            if (!sid) sid = prompt('Enter your Student ID to look up active borrowed books:');
-            if (!sid) return 'Return paused: Student ID required.';
+            if (!sid) {
+                sid = prompt('Enter your Student ID to look up active borrowed books:');
+            }
+            if (!sid) {
+                return `<strong>Return a Book:</strong> Please provide your Student ID to find active borrowing records.<br>
+                <div class="notice">Example: <code>return B01 for TP012345</code></div>`;
+            }
+            sid = sid.trim().toUpperCase();
+            localStorage.setItem('last_student_id', sid);
 
-            const mine = recs.filter(r => r.student_id.toUpperCase() === sid.toUpperCase() && r.borrowing_status === 'Borrowed');
-            if (mine.length === 0) return `<strong>No Active Records:</strong> No active borrowed books found for <strong>${sid}</strong>.`;
+            const mine = recs.filter(r => r.student_id.toUpperCase() === sid && r.borrowing_status === 'Borrowed');
+            if (mine.length === 0) {
+                return `<strong>No Active Records:</strong> No active borrowed books found for Student ID <strong>${sid}</strong>. All previous books have already been returned.`;
+            }
 
             const im = text.match(/\bB0?([1-9]|[1-7][0-9]|80)\b/i);
-            let rec = im ? mine.find(r => r.book_id.toUpperCase() === ('B' + String(im[1]).padStart(2, '0')).toUpperCase()) : null;
-            if (!rec) rec = mine.find(r => lower.includes(r.book_title.toLowerCase()));
-            if (!rec && mine.length === 1) rec = mine[0];
+            let rec = null;
+            if (im) {
+                const bid = 'B' + String(im[1]).padStart(2, '0');
+                rec = mine.find(r => r.book_id.toUpperCase() === bid.toUpperCase());
+            }
             if (!rec) {
-                let list = `<strong>${sid}</strong> has ${mine.length} active borrowed books:<br><br>`;
-                mine.forEach(r => { list += `• <strong>${r.book_id}: ${r.book_title}</strong> (Due: ${r.due_date})<br>`; });
-                list += `<br><div class="notice">Type <code>return ${mine[0].book_id} for ${sid}</code> to return a specific book.</div>`;
+                rec = mine.find(r => lower.includes(r.book_title.toLowerCase()));
+            }
+            if (!rec && mine.length === 1) {
+                rec = mine[0];
+            }
+            if (!rec) {
+                let list = `Student <strong>${sid}</strong> has <strong>${mine.length}</strong> active borrowed books. Which one are you returning?<br><br>`;
+                mine.forEach(r => {
+                    list += `• <strong>${r.book_id}: ${r.book_title}</strong> (Due: ${r.due_date})<br>`;
+                });
+                list += `<br><div class="notice">Type: <code>return ${mine[0].book_id} for ${sid}</code></div>`;
                 return list;
             }
 
             const today = new Date();
             const rDate = fmtDate(today);
-            const isLate = today > new Date(rec.due_date);
+            const dueDate = new Date(rec.due_date + 'T23:59:59');
+            const isLate = today > dueDate;
             rec.return_date = rDate;
             rec.borrowing_status = isLate ? 'Returned Late' : 'Returned';
             saveRecs(recs);
+
             const book = catalogue.find(b => b.id.toUpperCase() === rec.book_id.toUpperCase());
-            if (book) { book.available_copies = Math.min(book.total_copies, book.available_copies + 1); saveCat(catalogue); }
+            if (book) {
+                book.available_copies = Math.min(book.total_copies, book.available_copies + 1);
+                saveCat(catalogue);
+            }
 
             return `<div class="receipt" style="border-color:rgba(52,211,153,.3)">
-            <div class="receipt-head">✓ Return Confirmed</div>
-            <table>
-                <tr><td>Borrow ID:</td><td><code>${rec.borrow_id}</code></td></tr>
-                <tr><td>Student ID:</td><td>${sid}</td></tr>
-                <tr><td>Book:</td><td>${rec.book_title} (${rec.book_id})</td></tr>
-                <tr><td>Return Date:</td><td>${rDate}</td></tr>
-                <tr><td>Due Date:</td><td>${rec.due_date}</td></tr>
-                <tr><td>Status:</td><td><span class="badge badge-returned">${rec.borrowing_status}</span></td></tr>
-                <tr><td>Restored Copies:</td><td>${book ? book.available_copies : 5} / 5</td></tr>
-            </table>
-            <div class="receipt-note">Return processed in simulated system.</div>
-        </div>`;
+                <div class="receipt-head">✓ Return Transaction Confirmed</div>
+                <table>
+                    <tr><td>Borrow ID:</td><td><code>${rec.borrow_id}</code></td></tr>
+                    <tr><td>Student ID:</td><td><strong>${sid}</strong></td></tr>
+                    <tr><td>Book:</td><td><strong>${rec.book_title}</strong> (<code>${rec.book_id}</code>)</td></tr>
+                    <tr><td>Borrow Date:</td><td>${rec.borrow_date}</td></tr>
+                    <tr><td>Return Date:</td><td>${rDate} <em>(Confirmed today)</em></td></tr>
+                    <tr><td>Due Date:</td><td>${rec.due_date}</td></tr>
+                    <tr><td>Status:</td><td><span class="badge badge-returned">${rec.borrowing_status}</span></td></tr>
+                    <tr><td>Restored Inventory:</td><td>${book ? book.available_copies : 5} / 5 copies available</td></tr>
+                </table>
+                <div class="receipt-note">Inventory restored. Type <code>history ${sid}</code> to view your updated history.</div>
+            </div>`;
         }
 
         function handleHistory(text, lower) {
             const recs = getRecs();
-            const sm = text.match(/\b(TP\d{5,8}|\d{6,8}|S\d{7,8})\b/i);
+            const sm = text.match(/\b(TP\d{4,8}|\d{5,8}|S\d{6,8})\b/i);
             let sid = sm ? sm[0].toUpperCase() : null;
-            if (!sid) sid = prompt('Enter your Student ID to view borrowing history:');
-            if (!sid) return 'Please enter your Student ID to view borrowing history.';
-            const mine = recs.filter(r => r.student_id.toUpperCase() === sid.toUpperCase());
-            if (mine.length === 0) return `<strong>Borrowing History for ${sid}:</strong><br>No records found. You haven't borrowed any books yet.`;
+
+            if (!sid) {
+                sid = localStorage.getItem('last_student_id');
+            }
+            if (!sid && recs.length > 0) {
+                const u = [...new Set(recs.map(r => r.student_id))];
+                if (u.length === 1) sid = u[0];
+            }
+            if (!sid) {
+                sid = prompt('Enter your Student ID (e.g. TP012345) to view borrowing history:');
+            }
+            if (!sid) {
+                if (recs.length === 0) {
+                    return `<strong>Borrowing History:</strong><br>No borrowing records found in the system yet.<br>
+                    <div class="notice">To borrow a book: <code>borrow B01 for TP012345</code></div>`;
+                }
+                const studentList = [...new Set(recs.map(r => r.student_id))].join(', ');
+                return `Please specify your <strong>Student ID</strong> to view borrowing history.<br>
+                <div class="notice">Example: <code>history TP012345</code> (Recorded students: ${studentList})</div>`;
+            }
+            sid = sid.trim().toUpperCase();
+            localStorage.setItem('last_student_id', sid);
+
+            const mine = recs.filter(r => r.student_id.toUpperCase() === sid);
+            if (mine.length === 0) {
+                return `<strong>Borrowing History — ${sid}:</strong><br>No borrowing records found for Student ID <strong>${sid}</strong>.<br>
+                <div class="notice">You can borrow up to 5 books. Type: <code>borrow B01 for ${sid}</code></div>`;
+            }
 
             const today = new Date();
-            let html = `<strong>Borrowing History — ${sid}:</strong>
+            let html = `<strong>Borrowing History for Student <code>${sid}</code> (${mine.length} record${mine.length > 1 ? 's' : ''}):</strong>
             <table class="data-table" style="margin-top:.4rem">
-                <thead><tr><th>Book</th><th>Borrowed</th><th>Due</th><th>Returned</th><th>Status</th></tr></thead>
+                <thead><tr><th>Book ID</th><th>Title</th><th>Borrow Date</th><th>Due Date</th><th>Return Date</th><th>Status</th></tr></thead>
                 <tbody>`;
             let fines = 0;
             mine.forEach(r => {
                 let cls = 'badge-borrowed', stat = r.borrowing_status;
-                if (!r.return_date && new Date(r.due_date) < today) {
-                    const days = Math.ceil((today - new Date(r.due_date)) / (1000 * 60 * 60 * 24));
-                    const f = Math.min(25, Math.max(0, days - 1) * 0.5);
+                const dueDate = new Date(r.due_date + 'T23:59:59');
+                if (!r.return_date && today > dueDate) {
+                    const diffMs = today - dueDate;
+                    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                    const chargedDays = Math.max(0, days - 1);
+                    const f = Math.min(25, chargedDays * 0.5);
                     fines += f;
-                    stat = `Overdue (${days}d · RM ${f.toFixed(2)})`;
+                    stat = `Overdue (${days}d late · RM ${f.toFixed(2)})`;
                     cls = 'badge-overdue';
-                } else if (r.borrowing_status.includes('Returned')) cls = 'badge-returned';
-                html += `<tr><td><strong>${esc(r.book_title)}</strong> (${r.book_id})</td>
-                <td>${r.borrow_date}</td><td>${r.due_date}</td>
-                <td>${r.return_date || '<em>—</em>'}</td>
-                <td><span class="badge ${cls}">${stat}</span></td></tr>`;
+                } else if (r.borrowing_status && r.borrowing_status.includes('Returned')) {
+                    cls = 'badge-returned';
+                }
+                html += `<tr>
+                    <td><code>${r.book_id}</code></td>
+                    <td><strong>${esc(r.book_title)}</strong></td>
+                    <td>${r.borrow_date}</td>
+                    <td>${r.due_date}</td>
+                    <td>${r.return_date || '<span style="color:var(--warn)">On Loan</span>'}</td>
+                    <td><span class="badge ${cls}">${stat}</span></td>
+                </tr>`;
             });
             html += `</tbody></table>`;
-            if (fines > 0) html += `<div style="margin-top:.5rem;padding:.45rem .7rem;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:7px;font-size:.78rem;color:#fca5a5">
-            <strong>Outstanding Fines: RM ${fines.toFixed(2)}</strong><br>Pay via Student Portal or Level 1 Service Counter.</div>`;
+            if (fines > 0) {
+                html += `<div style="margin-top:.5rem;padding:.45rem .7rem;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:7px;font-size:.78rem;color:#fca5a5">
+                    <strong>Outstanding Overdue Fines: RM ${fines.toFixed(2)}</strong><br>Payable via APU Student Portal or Level 1 Service Counter.
+                </div>`;
+            }
             return html;
         }
 
